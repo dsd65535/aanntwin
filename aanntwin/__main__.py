@@ -37,9 +37,10 @@ class TrainParams:
 
     batch_size: int = 1
     lr: float = 1e-3
+    weight_decay: float = 0.0
 
     def __str__(self) -> str:
-        return f"{self.batch_size}_{self.lr}"
+        return f"{self.batch_size}_{self.lr}_{self.weight_decay}"
 
 
 @dataclass
@@ -168,7 +169,11 @@ def train_and_test(
         record or normalize,
     ).to(device)
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(training_model.parameters(), lr=train_params.lr)
+    optimizer = torch.optim.SGD(
+        training_model.parameters(),
+        lr=train_params.lr,
+        weight_decay=train_params.weight_decay,
+    )
 
     cache_basename = (
         f"{dataset_name}_{train_params}_{model_params}_{training_nonidealities}_{seed}"
@@ -294,6 +299,7 @@ def main() -> None:
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
+            weight_decay=args.weight_decay,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
