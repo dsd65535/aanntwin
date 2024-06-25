@@ -13,6 +13,8 @@ DATACACHEDIR = Path("cache/data")
 def get_dataset(
     name: str,
     batch_size: int = 1,
+    shuffle: bool = False,
+    num_workers: int = 0,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Get a dataset by name"""
 
@@ -41,8 +43,12 @@ def get_dataset(
     else:
         raise ValueError(f"Unknown dataset {name}")
 
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=batch_size)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_data, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers
+    )
+    test_dataloader = torch.utils.data.DataLoader(
+        test_data, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers
+    )
 
     return train_dataloader, test_dataloader
 
