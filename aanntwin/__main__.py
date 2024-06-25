@@ -38,9 +38,10 @@ class TrainParams:
     batch_size: int = 1
     lr: float = 1e-3
     weight_decay: float = 0.0
+    momentum: float = 0.0
 
     def __str__(self) -> str:
-        return f"{self.batch_size}_{self.lr}_{self.weight_decay}"
+        return f"{self.batch_size}_{self.lr}_{self.weight_decay}_{self.momentum}"
 
 
 @dataclass
@@ -173,6 +174,7 @@ def train_and_test(
         training_model.parameters(),
         lr=train_params.lr,
         weight_decay=train_params.weight_decay,
+        momentum=train_params.momentum,
     )
 
     cache_basename = (
@@ -300,6 +302,7 @@ def main() -> None:
             batch_size=args.batch_size,
             lr=args.lr,
             weight_decay=args.weight_decay,
+            momentum=args.momentum,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
