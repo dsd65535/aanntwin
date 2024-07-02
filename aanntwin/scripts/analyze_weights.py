@@ -39,13 +39,14 @@ def _print_header() -> None:
 
 def _print_stats(name: str, values: torch.Tensor) -> None:
     abs_values = [abs(value) for value in values.flatten().tolist()]
+    val_stdev = stdev(abs_values) if len(abs_values) > 1 else 0
     print(
         f"{name}"
         f"\t{min(abs_values):.2E}"
         f"\t{mean(abs_values):.2E}"
         f"\t{median(abs_values):.2E}"
         f"\t{max(abs_values):.2E}"
-        f"\t{stdev(abs_values):.2E}"
+        f"\t{val_stdev:.2E}"
         f"\t{sum(abs_values):.2E}"
         f"\t{len(abs_values)}"
         f"\t{len(set(abs_values))}"
