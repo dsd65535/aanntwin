@@ -197,7 +197,12 @@ def train_and_test(
             (normalize or test_last_epoch) and last_epoch
         )
 
-        if not train_this_epoch and not train_next_epoch and not test_this_epoch:
+        if (
+            not last_epoch
+            and not train_this_epoch
+            and not train_next_epoch
+            and not test_this_epoch
+        ):
             continue
 
         logging.info(f"Epoch {idx_epoch+1}/{count_epoch}")
