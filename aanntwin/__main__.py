@@ -187,7 +187,9 @@ def train_and_test(
                 torch.save(model.named_state_dict(), cache_filepath)
         else:
             logging.info(f"Loading from {cache_filepath}...")
-            named_state_dict = torch.load(cache_filepath)
+            named_state_dict = torch.load(
+                cache_filepath, map_location=torch.device(device)
+            )
             model.load_named_state_dict(named_state_dict)
 
         if test_this_epoch:

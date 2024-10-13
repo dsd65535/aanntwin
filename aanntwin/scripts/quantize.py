@@ -4,6 +4,7 @@ from pathlib import Path
 
 import torch
 
+from aanntwin.basic import get_device
 from aanntwin.quantize import quantize_values_stdev
 
 
@@ -29,7 +30,9 @@ def main() -> None:
 
     args = parse_args()
 
-    named_state_dict = torch.load(args.input_path)
+    named_state_dict = torch.load(
+        args.input_path, map_location=torch.device(get_device())
+    )
     named_state_dict["conv2d_weight"] = quantize_values_stdev(
         named_state_dict["conv2d_weight"],
         args.conv2d_weight_bits,
