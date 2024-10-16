@@ -26,7 +26,7 @@ from aanntwin.parser import add_arguments_from_dataclass_fields
 
 MODELCACHEDIR = Path("cache/models")
 DATASET_NAME_DEFAULT = "MNIST"
-COUNT_EPOCH_DEFAULT = 5
+COUNT_EPOCH_DEFAULT = 100
 
 
 @dataclass
