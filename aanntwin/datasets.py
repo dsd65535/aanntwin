@@ -11,7 +11,7 @@ DATACACHEDIR = Path("cache/data")
 
 
 def get_dataset(
-    name: str = "MNIST",
+    name: str,
     batch_size: int = 1,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Get a dataset by name"""
@@ -86,7 +86,7 @@ def get_input_parameters(
 
 
 def get_dataset_and_params(
-    name: str = "MNIST",
+    name: str,
     batch_size: int = 1,
 ) -> Tuple[
     Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader],

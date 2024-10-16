@@ -10,6 +10,8 @@ from typing import Optional
 
 import git
 
+from aanntwin.__main__ import COUNT_EPOCH_DEFAULT
+from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
@@ -24,12 +26,12 @@ def run(
     noises_test: List[Optional[float]],
     output_filepath: Path,
     *,
-    dataset_name: str = "MNIST",
+    dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
-    count_epoch: int = 5,
+    count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
     print_rate: Optional[int] = None,
 ) -> None:
@@ -77,12 +79,12 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("output_filepath", type=Path)
-    parser.add_argument("--dataset_name", type=str, default="MNIST")
+    parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
     add_arguments_from_dataclass_fields(ModelParams, parser)
     add_arguments_from_dataclass_fields(Nonidealities, parser)
     add_arguments_from_dataclass_fields(Normalization, parser)
-    parser.add_argument("--count_epoch", type=int, default=5)
+    parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
     parser.add_argument("--print_git_info", action="store_true")

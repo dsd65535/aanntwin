@@ -5,6 +5,7 @@ import time
 
 import git
 
+from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.datasets import get_dataset_and_params
 
@@ -16,7 +17,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("--dataset_name", type=str, default="MNIST")
+    parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
 
