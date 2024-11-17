@@ -2,9 +2,9 @@
 from statistics import mean
 from statistics import median
 
-from cnn_model.__main__ import train_and_test
-from cnn_model.basic import test_model
-from cnn_model.normalize import normalize_values
+from aanntwin.__main__ import train_and_test
+from aanntwin.basic import test_model
+from aanntwin.normalize import normalize_values
 
 
 def main() -> None:

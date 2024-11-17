@@ -9,7 +9,7 @@ help:
 clean:
 	rm -rf ./dist
 	rm -rf ./.mypy_cache
-	rm -rf ./cnn_model/__pycache__/
+	rm -rf ./aanntwin/__pycache__/
 
 wheel:
 	$(POETRY) build --format wheel

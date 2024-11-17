@@ -4,7 +4,7 @@ from pathlib import Path
 
 import torch
 
-from cnn_model.quantize import quantize_values_stdev
+from aanntwin.quantize import quantize_values_stdev
 
 
 def parse_args() -> argparse.Namespace:

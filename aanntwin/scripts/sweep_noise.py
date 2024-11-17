@@ -10,13 +10,13 @@ from typing import Optional
 
 import git
 
-from cnn_model.__main__ import ModelParams
-from cnn_model.__main__ import train_and_test
-from cnn_model.__main__ import TrainParams
-from cnn_model.basic import test_model
-from cnn_model.models import Nonidealities
-from cnn_model.models import Normalization
-from cnn_model.parser import add_arguments_from_dataclass_fields
+from aanntwin.__main__ import ModelParams
+from aanntwin.__main__ import train_and_test
+from aanntwin.__main__ import TrainParams
+from aanntwin.basic import test_model
+from aanntwin.models import Nonidealities
+from aanntwin.models import Normalization
+from aanntwin.parser import add_arguments_from_dataclass_fields
 
 
 def run(

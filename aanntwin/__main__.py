@@ -13,16 +13,16 @@ from typing import Tuple
 import git
 import torch
 
-from cnn_model.basic import get_device
-from cnn_model.basic import test_model
-from cnn_model.basic import train_model
-from cnn_model.datasets import get_dataset_and_params
-from cnn_model.models import FullModelParams
-from cnn_model.models import Main
-from cnn_model.models import Nonidealities
-from cnn_model.models import Normalization
-from cnn_model.normalize import normalize_values
-from cnn_model.parser import add_arguments_from_dataclass_fields
+from aanntwin.basic import get_device
+from aanntwin.basic import test_model
+from aanntwin.basic import train_model
+from aanntwin.datasets import get_dataset_and_params
+from aanntwin.models import FullModelParams
+from aanntwin.models import Main
+from aanntwin.models import Nonidealities
+from aanntwin.models import Normalization
+from aanntwin.normalize import normalize_values
+from aanntwin.parser import add_arguments_from_dataclass_fields
 
 MODELCACHEDIR = Path("cache/models")
 

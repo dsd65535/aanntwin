@@ -5,8 +5,8 @@ import time
 
 import git
 
-from cnn_model.__main__ import ModelParams
-from cnn_model.datasets import get_dataset_and_params
+from aanntwin.__main__ import ModelParams
+from aanntwin.datasets import get_dataset_and_params
 
 
 def parse_args() -> argparse.Namespace:
