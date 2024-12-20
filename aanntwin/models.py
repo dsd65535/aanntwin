@@ -93,9 +93,13 @@ class Nonidealities:
     relu_cutoff: float = 0.0
     relu_out_noise: Optional[float] = None
     linear_out_noise: Optional[float] = None
+    conv2d_out_noise: Optional[float] = None
 
     def __str__(self) -> str:
-        return f"{self.relu_cutoff}_{self.relu_out_noise}_{self.linear_out_noise}"
+        return (
+            f"{self.relu_cutoff}_{self.relu_out_noise}_"
+            f"{self.linear_out_noise}_{self.conv2d_out_noise}"
+        )
 
 
 @dataclass
@@ -190,6 +194,34 @@ class Linear(torch.nn.Module):
         return out
 
 
+class Conv2d(torch.nn.Conv2d):
+    """Re-implementation of Conv2d"""
+
+    def __init__(
+        self,
+        in_channels: int,
+        conv_out_channels: int,
+        kernel_size: int,
+        stride: int,
+        padding: int,
+        out_noise: Optional[float] = None,
+    ) -> None:
+        # pylint:disable=too-many-arguments,too-many-positional-arguments
+        super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
+
+        self.out_noise = out_noise
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # pylint:disable=arguments-renamed
+        """Forward function"""
+
+        out = super().forward(x)
+        if self.out_noise is not None:
+            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+
+        return out
+
+
 class Main(torch.nn.Module):
     """A configurable CNN model similar to the one presented in:
 
@@ -232,12 +264,13 @@ class Main(torch.nn.Module):
 
         layers.append(
             (
-                torch.nn.Conv2d(
+                Conv2d(
                     full_model_params.in_channels,
                     full_model_params.conv_out_channels,
                     full_model_params.kernel_size,
                     full_model_params.stride,
                     full_model_params.padding,
+                    nonidealities.conv2d_out_noise,
                 ),
                 "conv2d",
             )

@@ -286,6 +286,7 @@ def main() -> None:
             relu_cutoff=args.relu_cutoff,
             relu_out_noise=args.relu_out_noise,
             linear_out_noise=args.linear_out_noise,
+            conv2d_out_noise=args.conv2d_out_noise,
         ),
         normalization=Normalization(
             min_out=args.min_out,
