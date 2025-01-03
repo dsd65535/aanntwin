@@ -46,7 +46,7 @@ def train_model(
 
         if noise is not None:
             tensor_in = torch.add(
-                tensor_in, noise * torch.randn(tensor_in.shape).to(device)
+                tensor_in, torch.randn(tensor_in.shape).to(device), alpha=noise
             )
 
         prediction = model(tensor_in)
@@ -83,7 +83,7 @@ def test_model(
 
             if noise is not None:
                 tensor_in = torch.add(
-                    tensor_in, noise * torch.randn(tensor_in.shape).to(device)
+                    tensor_in, torch.randn(tensor_in.shape).to(device), alpha=noise
                 )
 
             prediction = model(tensor_in)

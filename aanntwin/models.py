@@ -134,15 +134,13 @@ class Normalize(torch.nn.Module):
     ) -> None:
         super().__init__()
 
-        self.slope = torch.Tensor([(max_out - min_out) / (max_in - min_in)])
+        self.slope = (max_out - min_out) / (max_in - min_in)
         self.offset = torch.Tensor([min_out - self.slope * min_in])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
-        return torch.add(
-            self.offset.to(x.device), torch.multiply(self.slope.to(x.device), x)
-        )
+        return torch.add(self.offset.to(x.device), x, alpha=self.slope)
 
 
 class ReLU(torch.nn.Module):
@@ -160,7 +158,9 @@ class ReLU(torch.nn.Module):
 
         out = torch.max(self.cutoff.to(x.device), x)
         if self.out_noise is not None:
-            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
+            )
 
         return out
 
@@ -189,7 +189,9 @@ class Linear(torch.nn.Module):
 
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
         if self.out_noise is not None:
-            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
+            )
 
         return out
 
@@ -217,7 +219,9 @@ class Conv2d(torch.nn.Conv2d):
 
         out = super().forward(x)
         if self.out_noise is not None:
-            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
+            )
 
         return out
 
