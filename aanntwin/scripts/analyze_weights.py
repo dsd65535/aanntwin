@@ -58,7 +58,7 @@ def main() -> None:
     named_state_dict = torch.load(args.input_path)
     _print_header()
     for name, values in named_state_dict.items():
-        name_split = name.split("_")
+        name_split = name.replace(".", "_").split("_")
         value_type = name_split[-1]
         if value_type == "bias":
             continue
