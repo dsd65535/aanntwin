@@ -11,6 +11,8 @@ from typing import Optional
 
 import git
 
+from aanntwin.__main__ import COUNT_EPOCH_DEFAULT
+from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
@@ -101,11 +103,11 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("database_filepath", type=Path, nargs="?")
-    parser.add_argument("--dataset_name", type=str, default="MNIST")
+    parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
     add_arguments_from_dataclass_fields(Nonidealities, parser)
     add_arguments_from_dataclass_fields(Normalization, parser)
-    parser.add_argument("--count_epoch", type=int, default=5)
+    parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
     parser.add_argument("--print_git_info", action="store_true")

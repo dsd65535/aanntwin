@@ -4,6 +4,8 @@ from typing import Optional
 
 import numpy as np
 
+from aanntwin.__main__ import COUNT_EPOCH_DEFAULT
+from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
@@ -14,6 +16,7 @@ from aanntwin.quantize import quantize_values_ref
 
 
 def main(
+    *,
     min_bits: int = 0,
     max_bits: int = 7,
     min_ref: float = 0.1,
@@ -21,12 +24,12 @@ def main(
     count_ref: int = 30,
     look_at_linear_layer: bool = True,
     look_at_bias: bool = False,
-    dataset_name: str = "MNIST",
+    dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
-    count_epoch: int = 5,
+    count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
     print_rate: Optional[int] = None,
 ) -> None:

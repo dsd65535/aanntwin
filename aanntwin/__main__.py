@@ -25,6 +25,8 @@ from aanntwin.normalize import normalize_values
 from aanntwin.parser import add_arguments_from_dataclass_fields
 
 MODELCACHEDIR = Path("cache/models")
+DATASET_NAME_DEFAULT = "MNIST"
+COUNT_EPOCH_DEFAULT = 100
 
 
 @dataclass
@@ -102,12 +104,13 @@ def get_largest_cached_epoch_number(search_dirpath: Path, basename: str) -> int:
 
 
 def train_and_test(
-    dataset_name: str = "MNIST",
+    *,
+    dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
-    count_epoch: int = 5,
+    count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
     print_rate: Optional[int] = None,
     test_each_epoch: bool = False,
@@ -186,7 +189,9 @@ def train_and_test(
                 torch.save(model.named_state_dict(), cache_filepath)
         else:
             logging.info(f"Loading from {cache_filepath}...")
-            named_state_dict = torch.load(cache_filepath)
+            named_state_dict = torch.load(
+                cache_filepath, map_location=torch.device(device)
+            )
             model.load_named_state_dict(named_state_dict)
 
         if test_this_epoch:
@@ -228,12 +233,12 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("--dataset_name", type=str, default="MNIST")
+    parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
     add_arguments_from_dataclass_fields(ModelParams, parser)
     add_arguments_from_dataclass_fields(Nonidealities, parser)
     add_arguments_from_dataclass_fields(Normalization, parser)
-    parser.add_argument("--count_epoch", type=int, default=5)
+    parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
     parser.add_argument("--test_each_epoch", action="store_true")

@@ -35,6 +35,8 @@ def train_model(
     if print_rate is not None:
         total_size = len(dataloader.dataset)  # type:ignore
         logging.info("              Last Loss")
+    else:
+        total_size = None
 
     model.train()
 

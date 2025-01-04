@@ -8,6 +8,8 @@ from statistics import stdev
 
 import torch
 
+from aanntwin.basic import get_device
+
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI Arguments"""
@@ -55,10 +57,12 @@ def main() -> None:
 
     args = parse_args()
 
-    named_state_dict = torch.load(args.input_path)
+    named_state_dict = torch.load(
+        args.input_path, map_location=torch.device(get_device())
+    )
     _print_header()
     for name, values in named_state_dict.items():
-        name_split = name.split("_")
+        name_split = name.replace(".", "_").split("_")
         value_type = name_split[-1]
         if value_type == "bias":
             continue
