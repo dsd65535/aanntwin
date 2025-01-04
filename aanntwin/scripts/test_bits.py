@@ -14,6 +14,7 @@ from aanntwin.quantize import quantize_values_ref
 
 
 def main(
+    *,
     min_bits: int = 0,
     max_bits: int = 7,
     min_ref: float = 0.1,

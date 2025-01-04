@@ -102,6 +102,7 @@ def get_largest_cached_epoch_number(search_dirpath: Path, basename: str) -> int:
 
 
 def train_and_test(
+    *,
     dataset_name: str = "MNIST",
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
