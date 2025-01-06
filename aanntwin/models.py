@@ -94,11 +94,14 @@ class Nonidealities:
     relu_mult_out_noise: Optional[float] = None
     linear_mult_out_noise: Optional[float] = None
     conv2d_mult_out_noise: Optional[float] = None
+    linear_input_clip: Optional[float] = None
+    conv2d_input_clip: Optional[float] = None
 
     def __str__(self) -> str:
         return (
-            f"{self.relu_cutoff}_{self.relu_mult_out_noise}_"
-            f"{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+            f"{self.relu_cutoff}_{self.relu_mult_out_noise}"
+            f"_{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+            f"_{self.linear_input_clip}_{self.conv2d_input_clip}"
         )
 
 
@@ -175,6 +178,7 @@ class Linear(torch.nn.Module):
         in_features: int,
         out_features: int,
         mult_out_noise: Optional[float] = None,
+        input_clip: Optional[float] = None,
     ) -> None:
         super().__init__()
 
@@ -193,9 +197,13 @@ class Linear(torch.nn.Module):
             else ((self.in_features + 1) ** 0.5) * mult_out_noise
         )
 
+        self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
+        if self.input_clip is not None:
+            x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
         if self.mult_out_noise is not None:
             out = torch.add(
@@ -216,6 +224,7 @@ class Conv2d(torch.nn.Conv2d):
         stride: int,
         padding: int,
         mult_out_noise: Optional[float] = None,
+        input_clip: Optional[float] = None,
     ) -> None:
         # pylint:disable=too-many-arguments,too-many-positional-arguments
         super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
@@ -227,10 +236,14 @@ class Conv2d(torch.nn.Conv2d):
             * mult_out_noise
         )
 
+        self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # pylint:disable=arguments-renamed
         """Forward function"""
 
+        if self.input_clip is not None:
+            x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = super().forward(x)
         if self.mult_out_noise is not None:
             out = torch.add(
@@ -289,6 +302,7 @@ class Main(torch.nn.Module):
                     full_model_params.stride,
                     full_model_params.padding,
                     nonidealities.conv2d_mult_out_noise,
+                    nonidealities.conv2d_input_clip,
                 ),
                 "conv2d",
             )
@@ -321,6 +335,7 @@ class Main(torch.nn.Module):
                     full_model_params.final_size,
                     full_model_params.feature_count,
                     nonidealities.linear_mult_out_noise,
+                    nonidealities.linear_input_clip,
                 ),
                 "linear",
             )
