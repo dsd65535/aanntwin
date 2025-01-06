@@ -2,6 +2,7 @@
 """This script trains and tests the Main model"""
 import argparse
 import logging
+import random
 import re
 import time
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from typing import Optional
 from typing import Tuple
 
 import git
+import numpy as np
 import torch
 
 from aanntwin.basic import get_device
@@ -116,6 +118,7 @@ def train_and_test(
     test_each_epoch: bool = False,
     record: bool = False,
     normalize: bool = False,
+    seed: Optional[int] = 42,
 ) -> Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str]:
     # pylint:disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
     """Train and Test the Main model
@@ -123,6 +126,11 @@ def train_and_test(
     This function is based on:
     https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html
     """
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
 
     if model_params is None:
         model_params = ModelParams()
@@ -150,7 +158,9 @@ def train_and_test(
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=train_params.lr)
 
-    cache_basename = f"{dataset_name}_{train_params}_{model_params}_{nonidealities}"
+    cache_basename = (
+        f"{dataset_name}_{train_params}_{model_params}_{nonidealities}_{seed}"
+    )
     if use_cache:
         MODELCACHEDIR.mkdir(parents=True, exist_ok=True)
         largest_cached_epoch_number = get_largest_cached_epoch_number(
@@ -284,8 +294,9 @@ def main() -> None:
         ),
         nonidealities=Nonidealities(
             relu_cutoff=args.relu_cutoff,
-            relu_out_noise=args.relu_out_noise,
-            linear_out_noise=args.linear_out_noise,
+            relu_mult_out_noise=args.relu_mult_out_noise,
+            linear_mult_out_noise=args.linear_mult_out_noise,
+            conv2d_mult_out_noise=args.conv2d_mult_out_noise,
         ),
         normalization=Normalization(
             min_out=args.min_out,

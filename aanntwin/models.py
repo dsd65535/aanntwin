@@ -91,11 +91,15 @@ class Nonidealities:
     """Nonidealities parameters for Main model"""
 
     relu_cutoff: float = 0.0
-    relu_out_noise: Optional[float] = None
-    linear_out_noise: Optional[float] = None
+    relu_mult_out_noise: Optional[float] = None
+    linear_mult_out_noise: Optional[float] = None
+    conv2d_mult_out_noise: Optional[float] = None
 
     def __str__(self) -> str:
-        return f"{self.relu_cutoff}_{self.relu_out_noise}_{self.linear_out_noise}"
+        return (
+            f"{self.relu_cutoff}_{self.relu_mult_out_noise}_"
+            f"{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+        )
 
 
 @dataclass
@@ -130,33 +134,35 @@ class Normalize(torch.nn.Module):
     ) -> None:
         super().__init__()
 
-        self.slope = torch.Tensor([(max_out - min_out) / (max_in - min_in)])
+        self.slope = (max_out - min_out) / (max_in - min_in)
         self.offset = torch.Tensor([min_out - self.slope * min_in])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
-        return torch.add(
-            self.offset.to(x.device), torch.multiply(self.slope.to(x.device), x)
-        )
+        return torch.add(self.offset.to(x.device), x, alpha=self.slope)
 
 
 class ReLU(torch.nn.Module):
     """Re-implementation of ReLU"""
 
-    def __init__(self, cutoff: float = 0.0, out_noise: Optional[float] = None) -> None:
+    def __init__(
+        self, cutoff: float = 0.0, mult_out_noise: Optional[float] = None
+    ) -> None:
         super().__init__()
 
         self.cutoff = torch.tensor([cutoff])
 
-        self.out_noise = out_noise
+        self.mult_out_noise = mult_out_noise
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
         out = torch.max(self.cutoff.to(x.device), x)
-        if self.out_noise is not None:
-            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+        if self.mult_out_noise is not None:
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+            )
 
         return out
 
@@ -165,7 +171,10 @@ class Linear(torch.nn.Module):
     """Re-implementation of Linear"""
 
     def __init__(
-        self, in_features: int, out_features: int, out_noise: Optional[float] = None
+        self,
+        in_features: int,
+        out_features: int,
+        mult_out_noise: Optional[float] = None,
     ) -> None:
         super().__init__()
 
@@ -178,14 +187,55 @@ class Linear(torch.nn.Module):
         bound = 1 / math.sqrt(in_features)
         torch.nn.init.uniform_(self.bias, -bound, bound)
 
-        self.out_noise = out_noise
+        self.mult_out_noise = (
+            None
+            if mult_out_noise is None
+            else ((self.in_features + 1) ** 0.5) * mult_out_noise
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
-        if self.out_noise is not None:
-            out = torch.add(out, self.out_noise * torch.randn(out.shape).to(out.device))
+        if self.mult_out_noise is not None:
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+            )
+
+        return out
+
+
+class Conv2d(torch.nn.Conv2d):
+    """Re-implementation of Conv2d"""
+
+    def __init__(
+        self,
+        in_channels: int,
+        conv_out_channels: int,
+        kernel_size: int,
+        stride: int,
+        padding: int,
+        mult_out_noise: Optional[float] = None,
+    ) -> None:
+        # pylint:disable=too-many-arguments,too-many-positional-arguments
+        super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
+
+        self.mult_out_noise = (
+            None
+            if mult_out_noise is None
+            else ((self.kernel_size[0] * self.kernel_size[1] + 1) ** 0.5)
+            * mult_out_noise
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # pylint:disable=arguments-renamed
+        """Forward function"""
+
+        out = super().forward(x)
+        if self.mult_out_noise is not None:
+            out = torch.add(
+                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+            )
 
         return out
 
@@ -232,12 +282,13 @@ class Main(torch.nn.Module):
 
         layers.append(
             (
-                torch.nn.Conv2d(
+                Conv2d(
                     full_model_params.in_channels,
                     full_model_params.conv_out_channels,
                     full_model_params.kernel_size,
                     full_model_params.stride,
                     full_model_params.padding,
+                    nonidealities.conv2d_mult_out_noise,
                 ),
                 "conv2d",
             )
@@ -247,7 +298,7 @@ class Main(torch.nn.Module):
             layers.append(((Recorder(self.store["conv2d"]), "conv2d_record")))
         layers.append(
             (
-                ReLU(nonidealities.relu_cutoff, nonidealities.relu_out_noise),
+                ReLU(nonidealities.relu_cutoff, nonidealities.relu_mult_out_noise),
                 "conv2d_relu",
             )
         )
@@ -269,7 +320,7 @@ class Main(torch.nn.Module):
                 Linear(
                     full_model_params.final_size,
                     full_model_params.feature_count,
-                    nonidealities.linear_out_noise,
+                    nonidealities.linear_mult_out_noise,
                 ),
                 "linear",
             )
