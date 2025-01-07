@@ -37,10 +37,9 @@ class TrainParams:
 
     batch_size: int = 1
     lr: float = 1e-3
-    noise_train: Optional[float] = None
 
     def __str__(self) -> str:
-        return f"{self.batch_size}_{self.lr}_{self.noise_train}"
+        return f"{self.batch_size}_{self.lr}"
 
 
 @dataclass
@@ -202,7 +201,6 @@ def train_and_test(
                 optimizer,
                 device=device,
                 print_rate=print_rate,
-                noise=train_params.noise_train,
             )
             if use_cache:
                 logging.info(f"Saving to {cache_filepath}...")
@@ -295,7 +293,6 @@ def main() -> None:
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
-            noise_train=args.noise_train,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
@@ -306,6 +303,7 @@ def main() -> None:
             additional_layers=args.additional_layers,
         ),
         training_nonidealities=Nonidealities(
+            input_noise=args.training_input_noise,
             relu_cutoff=args.training_relu_cutoff,
             relu_mult_out_noise=args.training_relu_mult_out_noise,
             linear_mult_out_noise=args.training_linear_mult_out_noise,
@@ -314,6 +312,7 @@ def main() -> None:
             conv2d_input_clip=args.training_conv2d_input_clip,
         ),
         testing_nonidealities=Nonidealities(
+            input_noise=args.testing_input_noise,
             relu_cutoff=args.testing_relu_cutoff,
             relu_mult_out_noise=args.testing_relu_mult_out_noise,
             linear_mult_out_noise=args.testing_linear_mult_out_noise,

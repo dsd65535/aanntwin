@@ -90,6 +90,7 @@ class FullModelParams:
 class Nonidealities:
     """Nonidealities parameters for Main model"""
 
+    input_noise: Optional[float] = None
     relu_cutoff: float = 0.0
     relu_mult_out_noise: Optional[float] = None
     linear_mult_out_noise: Optional[float] = None
@@ -99,7 +100,7 @@ class Nonidealities:
 
     def __str__(self) -> str:
         return (
-            f"{self.relu_cutoff}_{self.relu_mult_out_noise}"
+            f"{self.input_noise}_{self.relu_cutoff}_{self.relu_mult_out_noise}"
             f"_{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
             f"_{self.linear_input_clip}_{self.conv2d_input_clip}"
         )
@@ -144,6 +145,20 @@ class Normalize(torch.nn.Module):
         """Forward function"""
 
         return torch.add(self.offset.to(x.device), x, alpha=self.slope)
+
+
+class Noise(torch.nn.Module):
+    """Layer that adds noise"""
+
+    def __init__(self, noise: float) -> None:
+        super().__init__()
+
+        self.noise = noise
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward function"""
+
+        return torch.add(x, torch.randn(x.shape).to(x.device), alpha=self.noise)
 
 
 class ReLU(torch.nn.Module):
@@ -289,6 +304,8 @@ class Main(torch.nn.Module):
                     "normalize",
                 )
             )
+        if nonidealities.input_noise is not None:
+            layers.append((Noise(nonidealities.input_noise), "input_noise"))
         if record:
             self.store["input"] = []
             layers.append(((Recorder(self.store["input"]), "input_record")))

@@ -39,31 +39,33 @@ def run(
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
 
-    if train_params is None:
-        train_params = TrainParams()
+    if training_nonidealities is None:
+        training_nonidealities = Nonidealities()
+    if testing_nonidealities is None:
+        testing_nonidealities = Nonidealities()
     if model_params is None:
         model_params = ModelParams()
 
     full_results = {}
     for noise_train in noises_train:
         results = {}
-
-        model, loss_fn, test_dataloader, device = train_and_test(
-            dataset_name=dataset_name,
-            train_params=replace(train_params, noise_train=noise_train),
-            model_params=model_params,
-            training_nonidealities=training_nonidealities,
-            testing_nonidealities=testing_nonidealities,
-            normalization=normalization,
-            count_epoch=count_epoch,
-            use_cache=use_cache,
-            print_rate=print_rate,
-        )
-
         for noise_test in noises_test:
-            result = test_model(
-                model, test_dataloader, loss_fn, device=device, noise=noise_test
+            model, loss_fn, test_dataloader, device = train_and_test(
+                dataset_name=dataset_name,
+                train_params=train_params,
+                model_params=model_params,
+                training_nonidealities=replace(
+                    training_nonidealities, input_noise=noise_train
+                ),
+                testing_nonidealities=replace(
+                    testing_nonidealities, input_noise=noise_test
+                ),
+                normalization=normalization,
+                count_epoch=count_epoch,
+                use_cache=use_cache,
+                print_rate=print_rate,
             )
+            result = test_model(model, test_dataloader, loss_fn, device=device)
             print(f"{noise_train} {noise_test} {result}")
             results[noise_test] = result
 
@@ -119,7 +121,6 @@ def main() -> None:
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
-            noise_train=args.noise_train,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
@@ -130,6 +131,7 @@ def main() -> None:
             additional_layers=args.additional_layers,
         ),
         training_nonidealities=Nonidealities(
+            input_noise=args.training_input_noise,
             relu_cutoff=args.training_relu_cutoff,
             relu_mult_out_noise=args.training_relu_mult_out_noise,
             linear_mult_out_noise=args.training_linear_mult_out_noise,
@@ -138,6 +140,7 @@ def main() -> None:
             conv2d_input_clip=args.training_conv2d_input_clip,
         ),
         testing_nonidealities=Nonidealities(
+            input_noise=args.testing_input_noise,
             relu_cutoff=args.testing_relu_cutoff,
             relu_mult_out_noise=args.testing_relu_mult_out_noise,
             linear_mult_out_noise=args.testing_linear_mult_out_noise,
