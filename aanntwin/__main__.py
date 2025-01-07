@@ -116,11 +116,14 @@ def train_and_test(
     use_cache: bool = True,
     print_rate: Optional[int] = None,
     test_each_epoch: bool = False,
+    test_last_epoch: bool = False,
     record: bool = False,
     normalize: bool = False,
     seed: Optional[int] = 42,
-) -> Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str]:
-    # ) -> Tuple[torch.nn.Module, torch.utils.data.DataLoader, str]:
+) -> Tuple[
+    Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str],
+    Optional[Tuple[float, float]],
+]:
     # pylint:disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
     """Train and Test the Main model
 
@@ -162,7 +165,7 @@ def train_and_test(
         model_params.get_full_model_params(*dataset_params),
         testing_nonidealities,
         normalization,
-        False,
+        record or normalize,
     ).to(device)
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(training_model.parameters(), lr=train_params.lr)
@@ -178,12 +181,13 @@ def train_and_test(
     else:
         largest_cached_epoch_number = 0
 
+    result = None
     for idx_epoch in range(count_epoch):
         last_epoch = idx_epoch == count_epoch - 1
         train_this_epoch = idx_epoch >= largest_cached_epoch_number
         train_next_epoch = idx_epoch >= largest_cached_epoch_number - 1
         test_this_epoch = (logging_info and (test_each_epoch or last_epoch)) or (
-            normalize and last_epoch
+            (normalize or test_last_epoch) and last_epoch
         )
 
         if not train_this_epoch and not train_next_epoch and not test_this_epoch:
@@ -218,9 +222,8 @@ def train_and_test(
                 for layer in testing_model.store.values():
                     layer.clear()
             logging.info("Testing...")
-            avg_loss, accuracy = test_model(
-                testing_model, test_dataloader, loss_fn, device=device
-            )
+            result = test_model(testing_model, test_dataloader, loss_fn, device=device)
+            avg_loss, accuracy = result
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
@@ -236,14 +239,12 @@ def train_and_test(
 
         if logging_info:
             logging.info("Testing...")
-            avg_loss, accuracy = test_model(
-                testing_model, test_dataloader, loss_fn, device=device
-            )
+            result = test_model(testing_model, test_dataloader, loss_fn, device=device)
+            avg_loss, accuracy = result
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
-    return testing_model, loss_fn, test_dataloader, device
-    # return loss_fn, test_dataloader, device
+    return (testing_model, loss_fn, test_dataloader, device), result
 
 
 def parse_args() -> argparse.Namespace:

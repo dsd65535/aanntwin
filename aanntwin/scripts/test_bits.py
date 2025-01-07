@@ -46,7 +46,7 @@ def main(
     if model_params is None:
         model_params = ModelParams()
 
-    model, loss_fn, test_dataloader, device = train_and_test(
+    (model, loss_fn, test_dataloader, device), result = train_and_test(
         dataset_name=dataset_name,
         train_params=train_params,
         model_params=model_params,
@@ -56,10 +56,11 @@ def main(
         count_epoch=count_epoch,
         use_cache=use_cache,
         print_rate=print_rate,
+        test_last_epoch=True,
     )
-
-    _, accuracy = test_model(model, test_dataloader, loss_fn, device=device)
-    print(f"Unlimited Accuracy: {accuracy}")
+    if result is None:
+        raise RuntimeError
+    print(f"Unlimited Accuracy: {result[1]}")
 
     original_state_dict = {k: v.clone() for k, v in model.named_state_dict().items()}
     weight_stdev = stdev(original_state_dict[layer_params].flatten().tolist())

@@ -15,7 +15,6 @@ from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
-from aanntwin.basic import test_model
 from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.parser import add_arguments_from_dataclass_fields
@@ -50,7 +49,7 @@ def run(
     for noise_train in noises_train:
         results = {}
         for noise_test in noises_test:
-            model, loss_fn, test_dataloader, device = train_and_test(
+            _, result = train_and_test(
                 dataset_name=dataset_name,
                 train_params=train_params,
                 model_params=model_params,
@@ -64,8 +63,10 @@ def run(
                 count_epoch=count_epoch,
                 use_cache=use_cache,
                 print_rate=print_rate,
+                test_last_epoch=True,
             )
-            result = test_model(model, test_dataloader, loss_fn, device=device)
+            if result is None:
+                raise RuntimeError
             print(f"{noise_train} {noise_test} {result}")
             results[noise_test] = result
 
