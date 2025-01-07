@@ -53,6 +53,7 @@ def add_arguments_from_dataclass_fields(
     parent: type,
     parser: argparse.ArgumentParser,
     help_dict: Optional[Dict[str, str]] = None,
+    prefix: Optional[str] = None,
 ) -> None:
     """Add an argument to a parser for each member of a dataclass"""
 
@@ -83,6 +84,9 @@ def add_arguments_from_dataclass_fields(
             if kwargs["type"] is bool:
                 if default is True:
                     name = f"no_{name}"
+
+        if prefix is not None:
+            name = f"{prefix}_{name}"
 
         if help_dict is not None and name in help_dict:
             kwargs["help"] = help_dict[name]

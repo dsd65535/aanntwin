@@ -66,7 +66,8 @@ def run(
     dataset_name: str,
     train_params: Optional[TrainParams],
     model_params: ModelParams,
-    nonidealities: Optional[Nonidealities] = None,
+    training_nonidealities: Optional[Nonidealities] = None,
+    testing_nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
     count_epoch: int,
     use_cache: bool = True,
@@ -80,7 +81,8 @@ def run(
             dataset_name=dataset_name,
             train_params=train_params,
             model_params=model_params,
-            nonidealities=nonidealities,
+            training_nonidealities=training_nonidealities,
+            testing_nonidealities=testing_nonidealities,
             normalization=normalization,
             count_epoch=count_epoch,
             use_cache=use_cache,
@@ -105,7 +107,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("database_filepath", type=Path, nargs="?")
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser)
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
     add_arguments_from_dataclass_fields(Normalization, parser)
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
@@ -137,11 +140,21 @@ def main() -> None:
         lr=args.lr,
         noise_train=args.noise_train,
     )
-    nonidealities = Nonidealities(
-        relu_cutoff=args.relu_cutoff,
-        relu_mult_out_noise=args.relu_mult_out_noise,
-        linear_mult_out_noise=args.linear_mult_out_noise,
-        conv2d_mult_out_noise=args.conv2d_mult_out_noise,
+    training_nonidealities = Nonidealities(
+        relu_cutoff=args.training_relu_cutoff,
+        relu_mult_out_noise=args.training_relu_mult_out_noise,
+        linear_mult_out_noise=args.training_linear_mult_out_noise,
+        conv2d_mult_out_noise=args.training_conv2d_mult_out_noise,
+        linear_input_clip=args.training_linear_input_clip,
+        conv2d_input_clip=args.training_conv2d_input_clip,
+    )
+    testing_nonidealities = Nonidealities(
+        relu_cutoff=args.testing_relu_cutoff,
+        relu_mult_out_noise=args.testing_relu_mult_out_noise,
+        linear_mult_out_noise=args.testing_linear_mult_out_noise,
+        conv2d_mult_out_noise=args.testing_conv2d_mult_out_noise,
+        linear_input_clip=args.testing_linear_input_clip,
+        conv2d_input_clip=args.testing_conv2d_input_clip,
     )
     normalization = Normalization(
         min_out=args.min_out,
@@ -171,7 +184,8 @@ def main() -> None:
                 dataset_name=args.dataset_name,
                 train_params=train_params,
                 model_params=model_params,
-                nonidealities=nonidealities,
+                training_nonidealities=training_nonidealities,
+                testing_nonidealities=testing_nonidealities,
                 normalization=normalization,
                 count_epoch=args.count_epoch,
                 use_cache=not args.no_cache,

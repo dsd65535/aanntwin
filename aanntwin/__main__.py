@@ -110,7 +110,8 @@ def train_and_test(
     dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
-    nonidealities: Optional[Nonidealities] = None,
+    training_nonidealities: Optional[Nonidealities] = None,
+    testing_nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
     count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
@@ -120,6 +121,7 @@ def train_and_test(
     normalize: bool = False,
     seed: Optional[int] = 42,
 ) -> Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str]:
+    # ) -> Tuple[torch.nn.Module, torch.utils.data.DataLoader, str]:
     # pylint:disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
     """Train and Test the Main model
 
@@ -136,8 +138,10 @@ def train_and_test(
         model_params = ModelParams()
     if train_params is None:
         train_params = TrainParams()
-    if nonidealities is None:
-        nonidealities = Nonidealities()
+    if training_nonidealities is None:
+        training_nonidealities = Nonidealities()
+    if testing_nonidealities is None:
+        testing_nonidealities = Nonidealities()
     if normalization is None:
         normalization = Normalization()
 
@@ -149,17 +153,23 @@ def train_and_test(
         name=dataset_name, batch_size=train_params.batch_size
     )
 
-    model = Main(
+    training_model = Main(
         model_params.get_full_model_params(*dataset_params),
-        nonidealities,
+        training_nonidealities,
         normalization,
         record or normalize,
     ).to(device)
+    testing_model = Main(
+        model_params.get_full_model_params(*dataset_params),
+        testing_nonidealities,
+        normalization,
+        False,
+    ).to(device)
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=train_params.lr)
+    optimizer = torch.optim.SGD(training_model.parameters(), lr=train_params.lr)
 
     cache_basename = (
-        f"{dataset_name}_{train_params}_{model_params}_{nonidealities}_{seed}"
+        f"{dataset_name}_{train_params}_{model_params}_{training_nonidealities}_{seed}"
     )
     if use_cache:
         MODELCACHEDIR.mkdir(parents=True, exist_ok=True)
@@ -186,7 +196,7 @@ def train_and_test(
         if train_this_epoch:
             logging.info("Training...")
             train_model(
-                model,
+                training_model,
                 train_dataloader,
                 loss_fn,
                 optimizer,
@@ -196,44 +206,46 @@ def train_and_test(
             )
             if use_cache:
                 logging.info(f"Saving to {cache_filepath}...")
-                torch.save(model.named_state_dict(), cache_filepath)
+                torch.save(training_model.named_state_dict(), cache_filepath)
         else:
             logging.info(f"Loading from {cache_filepath}...")
             named_state_dict = torch.load(
                 cache_filepath, map_location=torch.device(device)
             )
-            model.load_named_state_dict(named_state_dict)
+            training_model.load_named_state_dict(named_state_dict)
 
         if test_this_epoch:
+            testing_model.load_named_state_dict(training_model.named_state_dict())
             if normalize and last_epoch:
-                for layer in model.store.values():
+                for layer in testing_model.store.values():
                     layer.clear()
             logging.info("Testing...")
             avg_loss, accuracy = test_model(
-                model, test_dataloader, loss_fn, device=device
+                testing_model, test_dataloader, loss_fn, device=device
             )
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
     if normalize:
         logging.info("Normalizing...")
-        normalize_values(model.named_state_dict(), model.store)
+        normalize_values(testing_model.named_state_dict(), testing_model.store)
 
         if use_cache:
             cache_filepath = Path(
                 f"{MODELCACHEDIR}/{cache_basename}_{count_epoch}_norm.pth"
             )
-            torch.save(model.named_state_dict(), cache_filepath)
+            torch.save(testing_model.named_state_dict(), cache_filepath)
 
         if logging_info:
             logging.info("Testing...")
             avg_loss, accuracy = test_model(
-                model, test_dataloader, loss_fn, device=device
+                testing_model, test_dataloader, loss_fn, device=device
             )
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
-    return model, loss_fn, test_dataloader, device
+    return testing_model, loss_fn, test_dataloader, device
+    # return loss_fn, test_dataloader, device
 
 
 def parse_args() -> argparse.Namespace:
@@ -246,7 +258,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
     add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser)
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
     add_arguments_from_dataclass_fields(Normalization, parser)
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
@@ -292,11 +305,21 @@ def main() -> None:
             pool_size=args.pool_size,
             additional_layers=args.additional_layers,
         ),
-        nonidealities=Nonidealities(
-            relu_cutoff=args.relu_cutoff,
-            relu_mult_out_noise=args.relu_mult_out_noise,
-            linear_mult_out_noise=args.linear_mult_out_noise,
-            conv2d_mult_out_noise=args.conv2d_mult_out_noise,
+        training_nonidealities=Nonidealities(
+            relu_cutoff=args.training_relu_cutoff,
+            relu_mult_out_noise=args.training_relu_mult_out_noise,
+            linear_mult_out_noise=args.training_linear_mult_out_noise,
+            conv2d_mult_out_noise=args.training_conv2d_mult_out_noise,
+            linear_input_clip=args.training_linear_input_clip,
+            conv2d_input_clip=args.training_conv2d_input_clip,
+        ),
+        testing_nonidealities=Nonidealities(
+            relu_cutoff=args.testing_relu_cutoff,
+            relu_mult_out_noise=args.testing_relu_mult_out_noise,
+            linear_mult_out_noise=args.testing_linear_mult_out_noise,
+            conv2d_mult_out_noise=args.testing_conv2d_mult_out_noise,
+            linear_input_clip=args.testing_linear_input_clip,
+            conv2d_input_clip=args.testing_conv2d_input_clip,
         ),
         normalization=Normalization(
             min_out=args.min_out,
