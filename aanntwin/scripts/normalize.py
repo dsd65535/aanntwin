@@ -10,10 +10,12 @@ from aanntwin.normalize import normalize_values
 def main() -> None:
     """Main function"""
 
-    model, loss_fn, test_dataloader, device = train_and_test(normalize=True)
-
-    _, accuracy = test_model(model, test_dataloader, loss_fn, device=device)
-    print(f"Original accuracy: {accuracy}")
+    (model, loss_fn, test_dataloader, device), result = train_and_test(
+        normalize=True, test_last_epoch=True
+    )
+    if result is None:
+        raise RuntimeError
+    print(f"Original accuracy: {result[1]}")
 
     for name, layer in model.store.items():
         vals = [val for tensor in layer for val in tensor.flatten().tolist()]

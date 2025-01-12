@@ -15,7 +15,6 @@ from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
-from aanntwin.basic import test_model
 from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.parser import add_arguments_from_dataclass_fields
@@ -29,7 +28,8 @@ def run(
     dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
-    nonidealities: Optional[Nonidealities] = None,
+    training_nonidealities: Optional[Nonidealities] = None,
+    testing_nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
     count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
@@ -38,30 +38,35 @@ def run(
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
 
-    if train_params is None:
-        train_params = TrainParams()
+    if training_nonidealities is None:
+        training_nonidealities = Nonidealities()
+    if testing_nonidealities is None:
+        testing_nonidealities = Nonidealities()
     if model_params is None:
         model_params = ModelParams()
 
     full_results = {}
     for noise_train in noises_train:
         results = {}
-
-        model, loss_fn, test_dataloader, device = train_and_test(
-            dataset_name=dataset_name,
-            train_params=replace(train_params, noise_train=noise_train),
-            model_params=model_params,
-            nonidealities=nonidealities,
-            normalization=normalization,
-            count_epoch=count_epoch,
-            use_cache=use_cache,
-            print_rate=print_rate,
-        )
-
         for noise_test in noises_test:
-            result = test_model(
-                model, test_dataloader, loss_fn, device=device, noise=noise_test
+            _, result = train_and_test(
+                dataset_name=dataset_name,
+                train_params=train_params,
+                model_params=model_params,
+                training_nonidealities=replace(
+                    training_nonidealities, input_noise=noise_train
+                ),
+                testing_nonidealities=replace(
+                    testing_nonidealities, input_noise=noise_test
+                ),
+                normalization=normalization,
+                count_epoch=count_epoch,
+                use_cache=use_cache,
+                print_rate=print_rate,
+                test_last_epoch=True,
             )
+            if result is None:
+                raise RuntimeError
             print(f"{noise_train} {noise_test} {result}")
             results[noise_test] = result
 
@@ -117,7 +122,6 @@ def main() -> None:
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
-            noise_train=args.noise_train,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
@@ -127,11 +131,23 @@ def main() -> None:
             pool_size=args.pool_size,
             additional_layers=args.additional_layers,
         ),
-        nonidealities=Nonidealities(
-            relu_cutoff=args.relu_cutoff,
-            relu_mult_out_noise=args.relu_mult_out_noise,
-            linear_mult_out_noise=args.linear_mult_out_noise,
-            conv2d_mult_out_noise=args.conv2d_mult_out_noise,
+        training_nonidealities=Nonidealities(
+            input_noise=args.training_input_noise,
+            relu_cutoff=args.training_relu_cutoff,
+            relu_mult_out_noise=args.training_relu_mult_out_noise,
+            linear_mult_out_noise=args.training_linear_mult_out_noise,
+            conv2d_mult_out_noise=args.training_conv2d_mult_out_noise,
+            linear_input_clip=args.training_linear_input_clip,
+            conv2d_input_clip=args.training_conv2d_input_clip,
+        ),
+        testing_nonidealities=Nonidealities(
+            input_noise=args.testing_input_noise,
+            relu_cutoff=args.testing_relu_cutoff,
+            relu_mult_out_noise=args.testing_relu_mult_out_noise,
+            linear_mult_out_noise=args.testing_linear_mult_out_noise,
+            conv2d_mult_out_noise=args.testing_conv2d_mult_out_noise,
+            linear_input_clip=args.testing_linear_input_clip,
+            conv2d_input_clip=args.testing_conv2d_input_clip,
         ),
         normalization=Normalization(
             min_out=args.min_out,

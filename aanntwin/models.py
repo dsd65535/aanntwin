@@ -90,15 +90,19 @@ class FullModelParams:
 class Nonidealities:
     """Nonidealities parameters for Main model"""
 
+    input_noise: Optional[float] = None
     relu_cutoff: float = 0.0
     relu_mult_out_noise: Optional[float] = None
     linear_mult_out_noise: Optional[float] = None
     conv2d_mult_out_noise: Optional[float] = None
+    linear_input_clip: Optional[float] = None
+    conv2d_input_clip: Optional[float] = None
 
     def __str__(self) -> str:
         return (
-            f"{self.relu_cutoff}_{self.relu_mult_out_noise}_"
-            f"{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+            f"{self.input_noise}_{self.relu_cutoff}_{self.relu_mult_out_noise}"
+            f"_{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+            f"_{self.linear_input_clip}_{self.conv2d_input_clip}"
         )
 
 
@@ -143,6 +147,20 @@ class Normalize(torch.nn.Module):
         return torch.add(self.offset.to(x.device), x, alpha=self.slope)
 
 
+class Noise(torch.nn.Module):
+    """Layer that adds noise"""
+
+    def __init__(self, noise: float) -> None:
+        super().__init__()
+
+        self.noise = noise
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward function"""
+
+        return torch.add(x, torch.randn(x.shape).to(x.device), alpha=self.noise)
+
+
 class ReLU(torch.nn.Module):
     """Re-implementation of ReLU"""
 
@@ -175,6 +193,7 @@ class Linear(torch.nn.Module):
         in_features: int,
         out_features: int,
         mult_out_noise: Optional[float] = None,
+        input_clip: Optional[float] = None,
     ) -> None:
         super().__init__()
 
@@ -193,9 +212,13 @@ class Linear(torch.nn.Module):
             else ((self.in_features + 1) ** 0.5) * mult_out_noise
         )
 
+        self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
+        if self.input_clip is not None:
+            x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
         if self.mult_out_noise is not None:
             out = torch.add(
@@ -216,6 +239,7 @@ class Conv2d(torch.nn.Conv2d):
         stride: int,
         padding: int,
         mult_out_noise: Optional[float] = None,
+        input_clip: Optional[float] = None,
     ) -> None:
         # pylint:disable=too-many-arguments,too-many-positional-arguments
         super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
@@ -227,10 +251,14 @@ class Conv2d(torch.nn.Conv2d):
             * mult_out_noise
         )
 
+        self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # pylint:disable=arguments-renamed
         """Forward function"""
 
+        if self.input_clip is not None:
+            x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = super().forward(x)
         if self.mult_out_noise is not None:
             out = torch.add(
@@ -276,6 +304,8 @@ class Main(torch.nn.Module):
                     "normalize",
                 )
             )
+        if nonidealities.input_noise is not None:
+            layers.append((Noise(nonidealities.input_noise), "input_noise"))
         if record:
             self.store["input"] = []
             layers.append(((Recorder(self.store["input"]), "input_record")))
@@ -289,6 +319,7 @@ class Main(torch.nn.Module):
                     full_model_params.stride,
                     full_model_params.padding,
                     nonidealities.conv2d_mult_out_noise,
+                    nonidealities.conv2d_input_clip,
                 ),
                 "conv2d",
             )
@@ -321,6 +352,7 @@ class Main(torch.nn.Module):
                     full_model_params.final_size,
                     full_model_params.feature_count,
                     nonidealities.linear_mult_out_noise,
+                    nonidealities.linear_input_clip,
                 ),
                 "linear",
             )

@@ -27,7 +27,8 @@ def main(
     dataset_name: str = DATASET_NAME_DEFAULT,
     train_params: Optional[TrainParams] = None,
     model_params: Optional[ModelParams] = None,
-    nonidealities: Optional[Nonidealities] = None,
+    training_nonidealities: Optional[Nonidealities] = None,
+    testing_nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
     count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
@@ -45,19 +46,21 @@ def main(
     if model_params is None:
         model_params = ModelParams()
 
-    model, loss_fn, test_dataloader, device = train_and_test(
+    (model, loss_fn, test_dataloader, device), result = train_and_test(
         dataset_name=dataset_name,
         train_params=train_params,
         model_params=model_params,
-        nonidealities=nonidealities,
+        training_nonidealities=training_nonidealities,
+        testing_nonidealities=testing_nonidealities,
         normalization=normalization,
         count_epoch=count_epoch,
         use_cache=use_cache,
         print_rate=print_rate,
+        test_last_epoch=True,
     )
-
-    _, accuracy = test_model(model, test_dataloader, loss_fn, device=device)
-    print(f"Unlimited Accuracy: {accuracy}")
+    if result is None:
+        raise RuntimeError
+    print(f"Unlimited Accuracy: {result[1]}")
 
     original_state_dict = {k: v.clone() for k, v in model.named_state_dict().items()}
     weight_stdev = stdev(original_state_dict[layer_params].flatten().tolist())
