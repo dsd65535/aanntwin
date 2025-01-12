@@ -122,6 +122,7 @@ def train_and_test(
     record: bool = False,
     normalize: bool = False,
     seed: Optional[int] = 42,
+    named_state_dict_filepath: Optional[Path] = None,
 ) -> Tuple[
     Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str],
     Optional[Tuple[float, float]],
@@ -220,9 +221,10 @@ def train_and_test(
                 device=device,
                 print_rate=print_rate,
             )
+            named_state_dict = training_model.named_state_dict()
             if use_cache:
                 logging.info(f"Saving to {cache_filepath}...")
-                torch.save(training_model.named_state_dict(), cache_filepath)
+                torch.save(named_state_dict, cache_filepath)
         else:
             logging.info(f"Loading from {cache_filepath}...")
             named_state_dict = torch.load(
@@ -231,7 +233,7 @@ def train_and_test(
             training_model.load_named_state_dict(named_state_dict)
 
         if test_this_epoch:
-            testing_model.load_named_state_dict(training_model.named_state_dict())
+            testing_model.load_named_state_dict(named_state_dict)
             if normalize and last_epoch:
                 for layer in testing_model.store.values():
                     layer.clear()
@@ -244,12 +246,13 @@ def train_and_test(
     if normalize:
         logging.info("Normalizing...")
         normalize_values(testing_model.named_state_dict(), testing_model.store)
+        named_state_dict = testing_model.named_state_dict()
 
         if use_cache:
             cache_filepath = Path(
                 f"{MODELCACHEDIR}/{cache_basename}_{count_epoch}_norm.pth"
             )
-            torch.save(testing_model.named_state_dict(), cache_filepath)
+            torch.save(named_state_dict, cache_filepath)
 
         if logging_info:
             logging.info("Testing...")
@@ -257,6 +260,9 @@ def train_and_test(
             avg_loss, accuracy = result
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
+
+    if named_state_dict_filepath is not None:
+        torch.save(named_state_dict, named_state_dict_filepath)
 
     return (testing_model, loss_fn, test_dataloader, device), result
 
@@ -281,6 +287,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--normalize", action="store_true")
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
+    parser.add_argument("--output_path", type=Path, nargs="?")
 
     return parser.parse_args()
 
@@ -348,6 +355,7 @@ def main() -> None:
         print_rate=args.print_rate,
         test_each_epoch=args.test_each_epoch,
         normalize=args.normalize,
+        named_state_dict_filepath=args.output_path,
     )
 
     if args.timed:
