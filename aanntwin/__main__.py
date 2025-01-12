@@ -137,6 +137,8 @@ def train_and_test(
         torch.manual_seed(seed)
         random.seed(seed)
         np.random.seed(seed)
+    elif use_cache:
+        logging.warning("Using cache with a random seed!")
 
     if model_params is None:
         model_params = ModelParams()
