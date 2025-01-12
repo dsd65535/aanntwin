@@ -37,9 +37,11 @@ class TrainParams:
 
     batch_size: int = 1
     lr: float = 1e-3
+    weight_decay: float = 0.0
+    momentum: float = 0.0
 
     def __str__(self) -> str:
-        return f"{self.batch_size}_{self.lr}"
+        return f"{self.batch_size}_{self.lr}_{self.weight_decay}_{self.momentum}"
 
 
 @dataclass
@@ -168,7 +170,12 @@ def train_and_test(
         record or normalize,
     ).to(device)
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(training_model.parameters(), lr=train_params.lr)
+    optimizer = torch.optim.SGD(
+        training_model.parameters(),
+        lr=train_params.lr,
+        weight_decay=train_params.weight_decay,
+        momentum=train_params.momentum,
+    )
 
     cache_basename = (
         f"{dataset_name}_{train_params}_{model_params}_{training_nonidealities}_{seed}"
@@ -190,7 +197,12 @@ def train_and_test(
             (normalize or test_last_epoch) and last_epoch
         )
 
-        if not train_this_epoch and not train_next_epoch and not test_this_epoch:
+        if (
+            not last_epoch
+            and not train_this_epoch
+            and not train_next_epoch
+            and not test_this_epoch
+        ):
             continue
 
         logging.info(f"Epoch {idx_epoch+1}/{count_epoch}")
@@ -294,6 +306,8 @@ def main() -> None:
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
+            weight_decay=args.weight_decay,
+            momentum=args.momentum,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
