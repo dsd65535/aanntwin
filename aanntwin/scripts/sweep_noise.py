@@ -51,11 +51,6 @@ def run(
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
 
-    if seed is not None:
-        torch.manual_seed(seed)
-        random.seed(seed)
-        np.random.seed(seed)
-
     if training_nonidealities is None:
         training_nonidealities = Nonidealities()
     if testing_nonidealities is None:
@@ -89,6 +84,10 @@ def run(
         )
         normalize_values(testing_model.named_state_dict(), testing_model.store)
         for noise_test in noises_test:
+            if seed is not None:
+                torch.manual_seed(seed)
+                random.seed(seed)
+                np.random.seed(seed)
             noisy_testing_model = Main(
                 full_model_params,
                 replace(
