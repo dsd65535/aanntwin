@@ -143,18 +143,18 @@ def main() -> None:
     training_nonidealities = Nonidealities(
         input_noise=args.training_input_noise,
         relu_cutoff=args.training_relu_cutoff,
-        relu_mult_out_noise=args.training_relu_mult_out_noise,
-        linear_mult_out_noise=args.training_linear_mult_out_noise,
-        conv2d_mult_out_noise=args.training_conv2d_mult_out_noise,
+        relu_out_noise=args.training_relu_out_noise,
+        linear_out_noise=args.training_linear_out_noise,
+        conv2d_out_noise=args.training_conv2d_out_noise,
         linear_input_clip=args.training_linear_input_clip,
         conv2d_input_clip=args.training_conv2d_input_clip,
     )
     testing_nonidealities = Nonidealities(
         input_noise=args.testing_input_noise,
         relu_cutoff=args.testing_relu_cutoff,
-        relu_mult_out_noise=args.testing_relu_mult_out_noise,
-        linear_mult_out_noise=args.testing_linear_mult_out_noise,
-        conv2d_mult_out_noise=args.testing_conv2d_mult_out_noise,
+        relu_out_noise=args.testing_relu_out_noise,
+        linear_out_noise=args.testing_linear_out_noise,
+        conv2d_out_noise=args.testing_conv2d_out_noise,
         linear_input_clip=args.testing_linear_input_clip,
         conv2d_input_clip=args.testing_conv2d_input_clip,
     )
