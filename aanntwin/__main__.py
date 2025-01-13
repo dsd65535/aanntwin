@@ -160,7 +160,13 @@ def train_and_test(
     record: bool = False,
     seed: Optional[int] = SEED_DEFAULT,
 ) -> Tuple[
-    Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str],
+    Tuple[
+        torch.nn.Module,
+        torch.nn.Module,
+        torch.utils.data.DataLoader,
+        FullModelParams,
+        str,
+    ],
     Optional[Tuple[float, float]],
 ]:
     # pylint:disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
@@ -184,7 +190,7 @@ def train_and_test(
     if training_nonidealities is None:
         training_nonidealities = Nonidealities()
     if testing_nonidealities is None:
-        testing_nonidealities = Nonidealities()
+        testing_nonidealities = training_nonidealities
     if normalization is None:
         normalization = Normalization()
 
@@ -195,14 +201,15 @@ def train_and_test(
         name=dataset_name, batch_size=train_params.batch_size
     )
 
+    full_model_params = model_params.get_full_model_params(*dataset_params)
     training_model = Main(
-        model_params.get_full_model_params(*dataset_params),
+        full_model_params,
         training_nonidealities,
         normalization,
         False,
     ).to(device)
     testing_model = Main(
-        model_params.get_full_model_params(*dataset_params),
+        full_model_params,
         testing_nonidealities,
         normalization,
         record,
@@ -280,7 +287,7 @@ def train_and_test(
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
-    return (testing_model, loss_fn, test_dataloader, device), result
+    return (testing_model, loss_fn, test_dataloader, full_model_params, device), result
 
 
 def parse_args() -> argparse.Namespace:
@@ -328,7 +335,7 @@ def main() -> None:
     if args.timed:
         start = time.time()
 
-    (testing_model, loss_fn, test_dataloader, device), _ = train_and_test(
+    (testing_model, loss_fn, test_dataloader, _, device), _ = train_and_test(
         dataset_name=args.dataset_name,
         train_params=TrainParams(
             batch_size=args.batch_size,

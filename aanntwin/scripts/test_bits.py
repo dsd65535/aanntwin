@@ -46,7 +46,7 @@ def main(
     if model_params is None:
         model_params = ModelParams()
 
-    (model, loss_fn, test_dataloader, device), result = train_and_test(
+    (model, loss_fn, test_dataloader, _, device), result = train_and_test(
         dataset_name=dataset_name,
         train_params=train_params,
         model_params=model_params,

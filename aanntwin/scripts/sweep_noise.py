@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+import random
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -12,6 +13,8 @@ from typing import Optional
 from typing import Tuple
 
 import git
+import numpy as np
+import torch
 
 from aanntwin.__main__ import COUNT_EPOCH_DEFAULT
 from aanntwin.__main__ import DATASET_NAME_DEFAULT
@@ -19,8 +22,11 @@ from aanntwin.__main__ import ModelParams
 from aanntwin.__main__ import SEED_DEFAULT
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
+from aanntwin.basic import test_model
+from aanntwin.models import Main
 from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
+from aanntwin.normalize import normalize_values
 from aanntwin.parser import add_arguments_from_dataclass_fields
 
 
@@ -44,36 +50,53 @@ def run(
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
 
+    if seed is not None:
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+
     if training_nonidealities is None:
         training_nonidealities = Nonidealities()
     if testing_nonidealities is None:
-        testing_nonidealities = Nonidealities()
+        testing_nonidealities = training_nonidealities
 
     results: Dict[Optional[float], Dict[Optional[float], Tuple[float, float]]] = {}
     for noise_train in noises_train:
         results[noise_train] = {}
+        (
+            testing_model,
+            loss_fn,
+            test_dataloader,
+            full_model_params,
+            device,
+        ), _ = train_and_test(
+            dataset_name=dataset_name,
+            train_params=train_params,
+            model_params=model_params,
+            training_nonidealities=replace(
+                training_nonidealities, input_noise=noise_train
+            ),
+            testing_nonidealities=testing_nonidealities,
+            normalization=normalization,
+            count_epoch=count_epoch,
+            use_cache=use_cache,
+            print_rate=print_rate,
+            test_each_epoch=test_each_epoch,
+            test_last_epoch=False,
+            record=True,
+            seed=seed,
+        )
+        normalize_values(testing_model.named_state_dict(), testing_model.store)
         for noise_test in noises_test:
-            _, result = train_and_test(
-                dataset_name=dataset_name,
-                train_params=train_params,
-                model_params=model_params,
-                training_nonidealities=replace(
-                    training_nonidealities, input_noise=noise_train
-                ),
-                testing_nonidealities=replace(
-                    testing_nonidealities, input_noise=noise_test
-                ),
-                normalization=normalization,
-                count_epoch=count_epoch,
-                use_cache=use_cache,
-                print_rate=print_rate,
-                test_each_epoch=test_each_epoch,
-                test_last_epoch=True,
-                record=False,
-                seed=seed,
+            noisy_testing_model = Main(
+                full_model_params,
+                replace(testing_nonidealities, input_noise=noise_test),
+                normalization,
+            ).to(device)
+            noisy_testing_model.load_named_state_dict(testing_model.named_state_dict())
+            result = test_model(
+                noisy_testing_model, test_dataloader, loss_fn, device=device
             )
-            if result is None:
-                raise RuntimeError("No result returned")
             logging.info(f"{noise_train} {noise_test} {result}")
             results[noise_train][noise_test] = result
             with output_filepath.open("w") as output_file:
