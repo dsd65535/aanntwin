@@ -10,9 +10,7 @@ from aanntwin.normalize import normalize_values
 def main() -> None:
     """Main function"""
 
-    (model, loss_fn, test_dataloader, device), result = train_and_test(
-        normalize=True, test_last_epoch=True
-    )
+    (model, loss_fn, test_dataloader, device), result = train_and_test(record=True)
     if result is None:
         raise RuntimeError
     print(f"Original accuracy: {result[1]}")
