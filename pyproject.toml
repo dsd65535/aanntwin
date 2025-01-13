@@ -20,6 +20,9 @@ pylint = "^3.0.1"
 mypy = "^1.6.0"
 seaborn = "^0.13.2"
 
+[tool.poetry.scripts]
+aanntwin = "aanntwin.__main__:main"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

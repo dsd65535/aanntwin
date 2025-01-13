@@ -1,18 +1,22 @@
-# pylint:disable=duplicate-code
+# pylint:disable=logging-fstring-interpolation,duplicate-code
 """This script determines the effect of noise"""
 import argparse
 import json
+import logging
 import time
 from dataclasses import replace
 from pathlib import Path
+from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import git
 
 from aanntwin.__main__ import COUNT_EPOCH_DEFAULT
 from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
+from aanntwin.__main__ import SEED_DEFAULT
 from aanntwin.__main__ import train_and_test
 from aanntwin.__main__ import TrainParams
 from aanntwin.models import Nonidealities
@@ -34,6 +38,8 @@ def run(
     count_epoch: int = COUNT_EPOCH_DEFAULT,
     use_cache: bool = True,
     print_rate: Optional[int] = None,
+    test_each_epoch: bool = False,
+    seed: Optional[int] = SEED_DEFAULT,
 ) -> None:
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
@@ -42,12 +48,10 @@ def run(
         training_nonidealities = Nonidealities()
     if testing_nonidealities is None:
         testing_nonidealities = Nonidealities()
-    if model_params is None:
-        model_params = ModelParams()
 
-    full_results = {}
+    results: Dict[Optional[float], Dict[Optional[float], Tuple[float, float]]] = {}
     for noise_train in noises_train:
-        results = {}
+        results[noise_train] = {}
         for noise_test in noises_test:
             _, result = train_and_test(
                 dataset_name=dataset_name,
@@ -63,17 +67,17 @@ def run(
                 count_epoch=count_epoch,
                 use_cache=use_cache,
                 print_rate=print_rate,
+                test_each_epoch=test_each_epoch,
                 test_last_epoch=True,
+                record=False,
+                seed=seed,
             )
             if result is None:
-                raise RuntimeError
-            print(f"{noise_train} {noise_test} {result}")
-            results[noise_test] = result
-
-        full_results[noise_train] = results
-
-    with output_filepath.open("w") as output_file:
-        json.dump(full_results, output_file, indent=4)
+                raise RuntimeError("No result returned")
+            logging.info(f"{noise_train} {noise_test} {result}")
+            results[noise_train][noise_test] = result
+            with output_filepath.open("w") as output_file:
+                json.dump(results, output_file, indent=4)
 
 
 def parse_args() -> argparse.Namespace:
@@ -87,13 +91,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
     add_arguments_from_dataclass_fields(TrainParams, parser)
     add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser)
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
     add_arguments_from_dataclass_fields(Normalization, parser)
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
+    parser.add_argument("--test_each_epoch", action="store_true")
+    parser.add_argument("--seed", type=int, default=SEED_DEFAULT)
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
+    parser.add_argument("--output_path", type=Path, nargs="?")
 
     return parser.parse_args()
 
@@ -101,27 +109,31 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Main Function"""
 
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logging.info("Imports done, running script...")
+
     args = parse_args()
 
     if args.print_git_info:
         repo = git.Repo(search_parent_directories=True)
-        print(f"Git SHA: {repo.head.object.hexsha}")
+        logging.info(f"Git SHA: {repo.head.object.hexsha}")
         diff = repo.git.diff()
         if diff:
-            print(repo.git.diff())
-        print()
+            logging.info(repo.git.diff())
 
     if args.timed:
         start = time.time()
 
     run(
-        [None] + [2**exp for exp in range(-4, 4)],
-        [None] + [2 ** (exp / 10) for exp in range(-40, 40)],
+        [None] + [noise_idx / 10 for noise_idx in range(11)],
+        [None] + [noise_idx / 100 for noise_idx in range(101)],
         args.output_filepath,
         dataset_name=args.dataset_name,
         train_params=TrainParams(
             batch_size=args.batch_size,
             lr=args.lr,
+            weight_decay=args.weight_decay,
+            momentum=args.momentum,
         ),
         model_params=ModelParams(
             conv_out_channels=args.conv_out_channels,
@@ -158,11 +170,13 @@ def main() -> None:
         count_epoch=args.count_epoch,
         use_cache=not args.no_cache,
         print_rate=args.print_rate,
+        test_each_epoch=args.test_each_epoch,
+        seed=args.seed,
     )
 
     if args.timed:
         end = time.time()
-        print(f"{start} : {end} ({end - start})")
+        logging.info(f"{start} : {end} ({end - start})")
 
 
 if __name__ == "__main__":
