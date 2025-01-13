@@ -47,6 +47,7 @@ def run(
     test_each_epoch: bool = False,
     seed: Optional[int] = SEED_DEFAULT,
     noise_type: str = "input",
+    runs_per_point: int = 1,
 ) -> None:
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
@@ -56,7 +57,9 @@ def run(
     if testing_nonidealities is None:
         testing_nonidealities = training_nonidealities
 
-    results: Dict[Optional[float], Dict[Optional[float], Tuple[float, float]]] = {}
+    results: Dict[
+        Optional[float], Dict[Optional[float], List[Tuple[float, float]]]
+    ] = {}
     for noise_train in noises_train:
         results[noise_train] = {}
         (
@@ -97,13 +100,15 @@ def run(
                 normalization,
             ).to(device)
             noisy_testing_model.load_named_state_dict(testing_model.named_state_dict())
-            result = test_model(
-                noisy_testing_model, test_dataloader, loss_fn, device=device
-            )
-            logging.info(f"{noise_train} {noise_test} {result}")
-            results[noise_train][noise_test] = result
-            with output_filepath.open("w") as output_file:
-                json.dump(results, output_file, indent=4)
+            results[noise_train][noise_test] = []
+            for idx_run in range(runs_per_point):
+                result = test_model(
+                    noisy_testing_model, test_dataloader, loss_fn, device=device
+                )
+                logging.info(f"{noise_train} {noise_test} {idx_run} {result}")
+                results[noise_train][noise_test].append(result)
+                with output_filepath.open("w") as output_file:
+                    json.dump(results, output_file, indent=4)
 
 
 def parse_args() -> argparse.Namespace:
@@ -129,6 +134,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timed", action="store_true")
     parser.add_argument("--output_path", type=Path, nargs="?")
     parser.add_argument("--noise_type", type=str, default="input")
+    parser.add_argument("--runs_per_point", type=int, default=1)
 
     return parser.parse_args()
 
@@ -200,6 +206,7 @@ def main() -> None:
         test_each_epoch=args.test_each_epoch,
         seed=args.seed,
         noise_type=args.noise_type,
+        runs_per_point=args.runs_per_point,
     )
 
     if args.timed:
