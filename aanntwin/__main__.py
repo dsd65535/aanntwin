@@ -29,6 +29,7 @@ from aanntwin.parser import add_arguments_from_dataclass_fields
 MODELCACHEDIR = Path("cache/models")
 DATASET_NAME_DEFAULT = "MNIST"
 COUNT_EPOCH_DEFAULT = 100
+SEED_DEFAULT = 42
 
 
 @dataclass
@@ -157,7 +158,7 @@ def train_and_test(
     test_each_epoch: bool = False,
     test_last_epoch: bool = False,
     record: bool = False,
-    seed: Optional[int] = 42,
+    seed: Optional[int] = SEED_DEFAULT,
 ) -> Tuple[
     Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str],
     Optional[Tuple[float, float]],
@@ -300,6 +301,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--print_rate", type=int, nargs="?")
     parser.add_argument("--test_each_epoch", action="store_true")
     parser.add_argument("--test_last_epoch", action="store_true")
+    parser.add_argument("--seed", type=int, default=SEED_DEFAULT)
     parser.add_argument("--normalize", action="store_true")
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
@@ -372,6 +374,7 @@ def main() -> None:
         test_each_epoch=args.test_each_epoch,
         test_last_epoch=args.test_last_epoch,
         record=args.normalize,
+        seed=args.seed,
     )
 
     if args.normalize:
