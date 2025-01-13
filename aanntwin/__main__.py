@@ -248,12 +248,6 @@ def train_and_test(
         normalize_values(testing_model.named_state_dict(), testing_model.store)
         named_state_dict = testing_model.named_state_dict()
 
-        if use_cache:
-            cache_filepath = Path(
-                f"{MODELCACHEDIR}/{cache_basename}_{count_epoch}_norm.pth"
-            )
-            torch.save(named_state_dict, cache_filepath)
-
         if logging_info:
             logging.info("Testing...")
             result = test_model(testing_model, test_dataloader, loss_fn, device=device)
