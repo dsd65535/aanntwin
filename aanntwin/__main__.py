@@ -85,7 +85,7 @@ def _get_largest_cached_epoch_number(search_dirpath: Path, basename: str) -> int
 
     cached_indices = []
     for filepath in search_dirpath.glob("*"):
-        match = re.match(rf"{search_dirpath}/{basename}_(\d+).pth", str(filepath))
+        match = re.match(rf"^{search_dirpath}/{basename}_(\d+).pth$", str(filepath))
         if match is None:
             continue
         cached_indices.append(int(match.group(1)))
