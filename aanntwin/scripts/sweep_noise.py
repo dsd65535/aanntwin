@@ -46,6 +46,7 @@ def run(
     print_rate: Optional[int] = None,
     test_each_epoch: bool = False,
     seed: Optional[int] = SEED_DEFAULT,
+    noise_type: str = "input",
 ) -> None:
     # pylint:disable=too-many-arguments,too-many-locals
     """Run"""
@@ -90,7 +91,10 @@ def run(
         for noise_test in noises_test:
             noisy_testing_model = Main(
                 full_model_params,
-                replace(testing_nonidealities, input_noise=noise_test),
+                replace(
+                    testing_nonidealities,
+                    **{f"{noise_type}_noise": noise_test},  # type:ignore
+                ),
                 normalization,
             ).to(device)
             noisy_testing_model.load_named_state_dict(testing_model.named_state_dict())
@@ -125,6 +129,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
     parser.add_argument("--output_path", type=Path, nargs="?")
+    parser.add_argument("--noise_type", type=str, default="input")
 
     return parser.parse_args()
 
@@ -195,6 +200,7 @@ def main() -> None:
         print_rate=args.print_rate,
         test_each_epoch=args.test_each_epoch,
         seed=args.seed,
+        noise_type=args.noise_type,
     )
 
     if args.timed:
