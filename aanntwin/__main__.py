@@ -32,7 +32,7 @@ COUNT_EPOCH_DEFAULT = 100
 SEED_DEFAULT = 42
 
 
-@dataclass
+@dataclass(frozen=True)
 class TrainParams:
     """Parameters used during training"""
 
@@ -223,7 +223,8 @@ def train_and_test(
     )
 
     cache_basename = (
-        f"{dataset_name}_{train_params}_{model_params}_{training_nonidealities}_{seed}"
+        f"{dataset_name}_{hash(train_params)%(1<<64):x}_{model_params}_"
+        f"{hash(training_nonidealities)%(1<<64):x}_{seed}"
     )
     if use_cache:
         MODELCACHEDIR.mkdir(parents=True, exist_ok=True)
