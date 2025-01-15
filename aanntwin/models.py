@@ -86,22 +86,22 @@ class FullModelParams:
         return multiplier_count
 
 
-@dataclass
+@dataclass(frozen=True)
 class Nonidealities:
     """Nonidealities parameters for Main model"""
 
     input_noise: Optional[float] = None
     relu_cutoff: float = 0.0
-    relu_mult_out_noise: Optional[float] = None
-    linear_mult_out_noise: Optional[float] = None
-    conv2d_mult_out_noise: Optional[float] = None
+    relu_out_noise: Optional[float] = None
+    linear_out_noise: Optional[float] = None
+    conv2d_out_noise: Optional[float] = None
     linear_input_clip: Optional[float] = None
     conv2d_input_clip: Optional[float] = None
 
     def __str__(self) -> str:
         return (
-            f"{self.input_noise}_{self.relu_cutoff}_{self.relu_mult_out_noise}"
-            f"_{self.linear_mult_out_noise}_{self.conv2d_mult_out_noise}"
+            f"{self.input_noise}_{self.relu_cutoff}_{self.relu_out_noise}"
+            f"_{self.linear_out_noise}_{self.conv2d_out_noise}"
             f"_{self.linear_input_clip}_{self.conv2d_input_clip}"
         )
 
@@ -164,22 +164,20 @@ class Noise(torch.nn.Module):
 class ReLU(torch.nn.Module):
     """Re-implementation of ReLU"""
 
-    def __init__(
-        self, cutoff: float = 0.0, mult_out_noise: Optional[float] = None
-    ) -> None:
+    def __init__(self, cutoff: float = 0.0, out_noise: Optional[float] = None) -> None:
         super().__init__()
 
         self.cutoff = torch.tensor([cutoff])
 
-        self.mult_out_noise = mult_out_noise
+        self.out_noise = out_noise
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
         out = torch.max(self.cutoff.to(x.device), x)
-        if self.mult_out_noise is not None:
+        if self.out_noise is not None:
             out = torch.add(
-                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
             )
 
         return out
@@ -192,7 +190,7 @@ class Linear(torch.nn.Module):
         self,
         in_features: int,
         out_features: int,
-        mult_out_noise: Optional[float] = None,
+        out_noise: Optional[float] = None,
         input_clip: Optional[float] = None,
     ) -> None:
         super().__init__()
@@ -206,11 +204,7 @@ class Linear(torch.nn.Module):
         bound = 1 / math.sqrt(in_features)
         torch.nn.init.uniform_(self.bias, -bound, bound)
 
-        self.mult_out_noise = (
-            None
-            if mult_out_noise is None
-            else ((self.in_features + 1) ** 0.5) * mult_out_noise
-        )
+        self.out_noise = out_noise
 
         self.input_clip = None if input_clip is None else torch.tensor([input_clip])
 
@@ -220,9 +214,9 @@ class Linear(torch.nn.Module):
         if self.input_clip is not None:
             x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
-        if self.mult_out_noise is not None:
+        if self.out_noise is not None:
             out = torch.add(
-                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
             )
 
         return out
@@ -238,18 +232,13 @@ class Conv2d(torch.nn.Conv2d):
         kernel_size: int,
         stride: int,
         padding: int,
-        mult_out_noise: Optional[float] = None,
+        out_noise: Optional[float] = None,
         input_clip: Optional[float] = None,
     ) -> None:
         # pylint:disable=too-many-arguments,too-many-positional-arguments
         super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
 
-        self.mult_out_noise = (
-            None
-            if mult_out_noise is None
-            else ((self.kernel_size[0] * self.kernel_size[1] + 1) ** 0.5)
-            * mult_out_noise
-        )
+        self.out_noise = out_noise
 
         self.input_clip = None if input_clip is None else torch.tensor([input_clip])
 
@@ -260,9 +249,9 @@ class Conv2d(torch.nn.Conv2d):
         if self.input_clip is not None:
             x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
         out = super().forward(x)
-        if self.mult_out_noise is not None:
+        if self.out_noise is not None:
             out = torch.add(
-                out, torch.randn(out.shape).to(out.device), alpha=self.mult_out_noise
+                out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
             )
 
         return out
@@ -318,7 +307,7 @@ class Main(torch.nn.Module):
                     full_model_params.kernel_size,
                     full_model_params.stride,
                     full_model_params.padding,
-                    nonidealities.conv2d_mult_out_noise,
+                    nonidealities.conv2d_out_noise,
                     nonidealities.conv2d_input_clip,
                 ),
                 "conv2d",
@@ -329,7 +318,7 @@ class Main(torch.nn.Module):
             layers.append(((Recorder(self.store["conv2d"]), "conv2d_record")))
         layers.append(
             (
-                ReLU(nonidealities.relu_cutoff, nonidealities.relu_mult_out_noise),
+                ReLU(nonidealities.relu_cutoff, nonidealities.relu_out_noise),
                 "conv2d_relu",
             )
         )
@@ -351,7 +340,7 @@ class Main(torch.nn.Module):
                 Linear(
                     full_model_params.final_size,
                     full_model_params.feature_count,
-                    nonidealities.linear_mult_out_noise,
+                    nonidealities.linear_out_noise,
                     nonidealities.linear_input_clip,
                 ),
                 "linear",

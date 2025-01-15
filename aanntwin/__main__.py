@@ -32,7 +32,7 @@ COUNT_EPOCH_DEFAULT = 100
 SEED_DEFAULT = 42
 
 
-@dataclass
+@dataclass(frozen=True)
 class TrainParams:
     """Parameters used during training"""
 
@@ -85,7 +85,7 @@ def _get_largest_cached_epoch_number(search_dirpath: Path, basename: str) -> int
 
     cached_indices = []
     for filepath in search_dirpath.glob("*"):
-        match = re.match(rf"{search_dirpath}/{basename}_(\d+).pth", str(filepath))
+        match = re.match(rf"^{search_dirpath}/{basename}_(\d+).pth$", str(filepath))
         if match is None:
             continue
         cached_indices.append(int(match.group(1)))
@@ -160,7 +160,13 @@ def train_and_test(
     record: bool = False,
     seed: Optional[int] = SEED_DEFAULT,
 ) -> Tuple[
-    Tuple[torch.nn.Module, torch.nn.Module, torch.utils.data.DataLoader, str],
+    Tuple[
+        torch.nn.Module,
+        torch.nn.Module,
+        torch.utils.data.DataLoader,
+        FullModelParams,
+        str,
+    ],
     Optional[Tuple[float, float]],
 ]:
     # pylint:disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
@@ -184,7 +190,7 @@ def train_and_test(
     if training_nonidealities is None:
         training_nonidealities = Nonidealities()
     if testing_nonidealities is None:
-        testing_nonidealities = Nonidealities()
+        testing_nonidealities = training_nonidealities
     if normalization is None:
         normalization = Normalization()
 
@@ -195,14 +201,15 @@ def train_and_test(
         name=dataset_name, batch_size=train_params.batch_size
     )
 
+    full_model_params = model_params.get_full_model_params(*dataset_params)
     training_model = Main(
-        model_params.get_full_model_params(*dataset_params),
+        full_model_params,
         training_nonidealities,
         normalization,
         False,
     ).to(device)
     testing_model = Main(
-        model_params.get_full_model_params(*dataset_params),
+        full_model_params,
         testing_nonidealities,
         normalization,
         record,
@@ -216,7 +223,8 @@ def train_and_test(
     )
 
     cache_basename = (
-        f"{dataset_name}_{train_params}_{model_params}_{training_nonidealities}_{seed}"
+        f"{dataset_name}_{hash(train_params)%(1<<64):x}_{model_params}_"
+        f"{hash(training_nonidealities)%(1<<64):x}_{seed}"
     )
     if use_cache:
         MODELCACHEDIR.mkdir(parents=True, exist_ok=True)
@@ -280,7 +288,7 @@ def train_and_test(
             logging.info(f"Average Loss:  {avg_loss:<9f}")
             logging.info(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
-    return (testing_model, loss_fn, test_dataloader, device), result
+    return (testing_model, loss_fn, test_dataloader, full_model_params, device), result
 
 
 def parse_args() -> argparse.Namespace:
@@ -328,7 +336,7 @@ def main() -> None:
     if args.timed:
         start = time.time()
 
-    (testing_model, loss_fn, test_dataloader, device), _ = train_and_test(
+    (testing_model, loss_fn, test_dataloader, _, device), _ = train_and_test(
         dataset_name=args.dataset_name,
         train_params=TrainParams(
             batch_size=args.batch_size,
@@ -347,18 +355,18 @@ def main() -> None:
         training_nonidealities=Nonidealities(
             input_noise=args.training_input_noise,
             relu_cutoff=args.training_relu_cutoff,
-            relu_mult_out_noise=args.training_relu_mult_out_noise,
-            linear_mult_out_noise=args.training_linear_mult_out_noise,
-            conv2d_mult_out_noise=args.training_conv2d_mult_out_noise,
+            relu_out_noise=args.training_relu_out_noise,
+            linear_out_noise=args.training_linear_out_noise,
+            conv2d_out_noise=args.training_conv2d_out_noise,
             linear_input_clip=args.training_linear_input_clip,
             conv2d_input_clip=args.training_conv2d_input_clip,
         ),
         testing_nonidealities=Nonidealities(
             input_noise=args.testing_input_noise,
             relu_cutoff=args.testing_relu_cutoff,
-            relu_mult_out_noise=args.testing_relu_mult_out_noise,
-            linear_mult_out_noise=args.testing_linear_mult_out_noise,
-            conv2d_mult_out_noise=args.testing_conv2d_mult_out_noise,
+            relu_out_noise=args.testing_relu_out_noise,
+            linear_out_noise=args.testing_linear_out_noise,
+            conv2d_out_noise=args.testing_conv2d_out_noise,
             linear_input_clip=args.testing_linear_input_clip,
             conv2d_input_clip=args.testing_conv2d_input_clip,
         ),

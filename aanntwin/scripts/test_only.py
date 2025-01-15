@@ -108,8 +108,8 @@ def main() -> None:
         nonidealities=Nonidealities(
             input_noise=args.input_noise,
             relu_cutoff=args.relu_cutoff,
-            relu_mult_out_noise=args.relu_mult_out_noise,
-            linear_mult_out_noise=args.linear_mult_out_noise,
+            relu_out_noise=args.relu_out_noise,
+            linear_out_noise=args.linear_out_noise,
         ),
         normalization=Normalization(
             min_out=args.min_out,
