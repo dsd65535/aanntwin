@@ -224,7 +224,8 @@ def train_and_test(
     )
 
     cache_basename = (
-        f"{dataset_name}_{hash_str(str(train_params))}_{model_params}_"
+        f"{dataset_name}_{hash_str(str(train_params))}_"
+        f"Main-{hash_str(str(model_params))}_"
         f"{hash_str(str(training_nonidealities))}_{seed}"
     )
     if use_cache:
