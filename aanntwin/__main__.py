@@ -25,6 +25,7 @@ from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.normalize import normalize_values
 from aanntwin.parser import add_arguments_from_dataclass_fields
+from aanntwin.utils import hash_str
 
 MODELCACHEDIR = Path("cache/models")
 DATASET_NAME_DEFAULT = "MNIST"
@@ -32,7 +33,7 @@ COUNT_EPOCH_DEFAULT = 100
 SEED_DEFAULT = 42
 
 
-@dataclass(frozen=True)
+@dataclass
 class TrainParams:
     """Parameters used during training"""
 
@@ -223,8 +224,9 @@ def train_and_test(
     )
 
     cache_basename = (
-        f"{dataset_name}_{hash(train_params)%(1<<64):x}_{model_params}_"
-        f"{hash(training_nonidealities)%(1<<64):x}_{seed}"
+        f"{dataset_name}_{hash_str(str(train_params))}_"
+        f"Main-{hash_str(str(model_params))}_"
+        f"{hash_str(str(training_nonidealities))}_{seed}"
     )
     if use_cache:
         MODELCACHEDIR.mkdir(parents=True, exist_ok=True)

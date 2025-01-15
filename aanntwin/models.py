@@ -86,7 +86,7 @@ class FullModelParams:
         return multiplier_count
 
 
-@dataclass(frozen=True)
+@dataclass
 class Nonidealities:
     """Nonidealities parameters for Main model"""
 
