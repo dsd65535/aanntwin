@@ -2,6 +2,7 @@
 """This script tests an existing model"""
 import argparse
 import logging
+import random
 import time
 from pathlib import Path
 from typing import Optional
@@ -11,6 +12,7 @@ import torch
 
 from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
+from aanntwin.__main__ import SEED_DEFAULT
 from aanntwin.basic import get_device
 from aanntwin.basic import test_model
 from aanntwin.datasets import get_dataset_and_params
@@ -27,8 +29,14 @@ def test_only(
     model_params: Optional[ModelParams] = None,
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
+    seed: Optional[int] = SEED_DEFAULT,
 ) -> None:
+    # pylint:disable=too-many-arguments
     """Test a model using pre-trained parameters"""
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        random.seed(seed)
 
     if model_params is None:
         model_params = ModelParams()
@@ -72,6 +80,7 @@ def parse_args() -> argparse.Namespace:
     add_arguments_from_dataclass_fields(ModelParams, parser)
     add_arguments_from_dataclass_fields(Nonidealities, parser)
     add_arguments_from_dataclass_fields(Normalization, parser)
+    parser.add_argument("--seed", type=int, default=SEED_DEFAULT)
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
 
@@ -117,6 +126,7 @@ def main() -> None:
             min_in=args.min_in,
             max_in=args.max_in,
         ),
+        seed=args.seed,
     )
 
     if args.timed:
