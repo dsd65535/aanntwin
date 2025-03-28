@@ -30,7 +30,7 @@ def test_only(
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
     seed: Optional[int] = SEED_DEFAULT,
-) -> None:
+) -> float:
     # pylint:disable=too-many-arguments
     """Test a model using pre-trained parameters"""
 
@@ -66,6 +66,8 @@ def test_only(
     avg_loss, accuracy = test_model(model, test_dataloader, loss_fn, device=device)
     print(f"Average Loss:  {avg_loss:<9f}")
     print(f"Accuracy:      {(100*accuracy):<0.4f}%")
+
+    return accuracy
 
 
 def parse_args() -> argparse.Namespace:
