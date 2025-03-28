@@ -122,6 +122,8 @@ def main() -> None:
             conv2d_out_noise=args.conv2d_out_noise,
             linear_input_clip=args.linear_input_clip,
             conv2d_input_clip=args.conv2d_input_clip,
+            linear_input_nonlin=args.linear_input_nonlin,
+            conv2d_input_nonlin=args.conv2d_input_nonlin,
         ),
         normalization=Normalization(
             min_out=args.min_out,

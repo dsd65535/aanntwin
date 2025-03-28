@@ -148,6 +148,8 @@ def main() -> None:
         conv2d_out_noise=args.training_conv2d_out_noise,
         linear_input_clip=args.training_linear_input_clip,
         conv2d_input_clip=args.training_conv2d_input_clip,
+        linear_input_nonlin=args.training_linear_input_nonlin,
+        conv2d_input_nonlin=args.training_conv2d_input_nonlin,
     )
     testing_nonidealities = Nonidealities(
         input_noise=args.testing_input_noise,
@@ -157,6 +159,8 @@ def main() -> None:
         conv2d_out_noise=args.testing_conv2d_out_noise,
         linear_input_clip=args.testing_linear_input_clip,
         conv2d_input_clip=args.testing_conv2d_input_clip,
+        linear_input_nonlin=args.testing_linear_input_nonlin,
+        conv2d_input_nonlin=args.testing_conv2d_input_nonlin,
     )
     normalization = Normalization(
         min_out=args.min_out,
