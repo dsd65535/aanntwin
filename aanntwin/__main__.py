@@ -25,6 +25,7 @@ from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.normalize import normalize_values
 from aanntwin.parser import add_arguments_from_dataclass_fields
+from aanntwin.parser import construct_dataclass_from_args
 from aanntwin.utils import hash_str
 
 MODELCACHEDIR = Path("cache/models")
@@ -340,48 +341,15 @@ def main() -> None:
 
     (testing_model, loss_fn, test_dataloader, _, device), _ = train_and_test(
         dataset_name=args.dataset_name,
-        train_params=TrainParams(
-            batch_size=args.batch_size,
-            lr=args.lr,
-            weight_decay=args.weight_decay,
-            momentum=args.momentum,
+        train_params=construct_dataclass_from_args(TrainParams, args),
+        model_params=construct_dataclass_from_args(ModelParams, args),
+        training_nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, prefix="training"
         ),
-        model_params=ModelParams(
-            conv_out_channels=args.conv_out_channels,
-            kernel_size=args.kernel_size,
-            stride=args.stride,
-            padding=args.padding,
-            pool_size=args.pool_size,
-            additional_layers=args.additional_layers,
+        testing_nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, prefix="testing"
         ),
-        training_nonidealities=Nonidealities(
-            input_noise=args.training_input_noise,
-            relu_cutoff=args.training_relu_cutoff,
-            relu_out_noise=args.training_relu_out_noise,
-            linear_out_noise=args.training_linear_out_noise,
-            conv2d_out_noise=args.training_conv2d_out_noise,
-            linear_input_clip=args.training_linear_input_clip,
-            conv2d_input_clip=args.training_conv2d_input_clip,
-            linear_input_nonlin=args.training_linear_input_nonlin,
-            conv2d_input_nonlin=args.training_conv2d_input_nonlin,
-        ),
-        testing_nonidealities=Nonidealities(
-            input_noise=args.testing_input_noise,
-            relu_cutoff=args.testing_relu_cutoff,
-            relu_out_noise=args.testing_relu_out_noise,
-            linear_out_noise=args.testing_linear_out_noise,
-            conv2d_out_noise=args.testing_conv2d_out_noise,
-            linear_input_clip=args.testing_linear_input_clip,
-            conv2d_input_clip=args.testing_conv2d_input_clip,
-            linear_input_nonlin=args.testing_linear_input_nonlin,
-            conv2d_input_nonlin=args.testing_conv2d_input_nonlin,
-        ),
-        normalization=Normalization(
-            min_out=args.min_out,
-            max_out=args.max_out,
-            min_in=args.min_in,
-            max_in=args.max_in,
-        ),
+        normalization=construct_dataclass_from_args(Normalization, args),
         count_epoch=args.count_epoch,
         use_cache=not args.no_cache,
         print_rate=args.print_rate,

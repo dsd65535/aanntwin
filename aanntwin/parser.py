@@ -92,3 +92,22 @@ def add_arguments_from_dataclass_fields(
             kwargs["help"] = help_dict[name]
 
         parser.add_argument(f"--{name}", **kwargs)
+
+
+def construct_dataclass_from_args(
+    parent: type, args: argparse.Namespace, prefix: Optional[str] = None
+):  # TODO: figure out typing
+    """Construct a dataclass from an argpase"""
+
+    if not is_dataclass(parent):
+        raise ValueError(f"Parent {parent} is not a dataclass")
+
+    kwargs = {
+        field.name: getattr(args, field.name)
+        if prefix is None
+        else getattr(args, f"{prefix}_{field.name}")
+        for field in parent.__dataclass_fields__.values()
+        if field.init
+    }
+
+    return parent(**kwargs)

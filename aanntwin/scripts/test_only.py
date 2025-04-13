@@ -20,6 +20,7 @@ from aanntwin.models import Main
 from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.parser import add_arguments_from_dataclass_fields
+from aanntwin.parser import construct_dataclass_from_args
 
 
 def test_only(
@@ -108,31 +109,9 @@ def main() -> None:
     test_only(
         args.filepath,
         dataset_name=args.dataset_name,
-        model_params=ModelParams(
-            conv_out_channels=args.conv_out_channels,
-            kernel_size=args.kernel_size,
-            stride=args.stride,
-            padding=args.padding,
-            pool_size=args.pool_size,
-            additional_layers=args.additional_layers,
-        ),
-        nonidealities=Nonidealities(
-            input_noise=args.input_noise,
-            relu_cutoff=args.relu_cutoff,
-            relu_out_noise=args.relu_out_noise,
-            linear_out_noise=args.linear_out_noise,
-            conv2d_out_noise=args.conv2d_out_noise,
-            linear_input_clip=args.linear_input_clip,
-            conv2d_input_clip=args.conv2d_input_clip,
-            linear_input_nonlin=args.linear_input_nonlin,
-            conv2d_input_nonlin=args.conv2d_input_nonlin,
-        ),
-        normalization=Normalization(
-            min_out=args.min_out,
-            max_out=args.max_out,
-            min_in=args.min_in,
-            max_in=args.max_in,
-        ),
+        model_params=construct_dataclass_from_args(ModelParams, args),
+        nonidealities=construct_dataclass_from_args(Nonidealities, args),
+        normalization=construct_dataclass_from_args(Normalization, args),
         seed=args.seed,
     )
 
