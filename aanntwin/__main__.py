@@ -302,11 +302,11 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
-    add_arguments_from_dataclass_fields(TrainParams, parser)
-    add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
-    add_arguments_from_dataclass_fields(Normalization, parser)
+    add_arguments_from_dataclass_fields(TrainParams, parser, "train_params")
+    add_arguments_from_dataclass_fields(ModelParams, parser, "model_params")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "training_nonidealities")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "testing_nonidealities")
+    add_arguments_from_dataclass_fields(Normalization, parser, "normalization")
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
@@ -341,15 +341,17 @@ def main() -> None:
 
     (testing_model, loss_fn, test_dataloader, _, device), _ = train_and_test(
         dataset_name=args.dataset_name,
-        train_params=construct_dataclass_from_args(TrainParams, args),
-        model_params=construct_dataclass_from_args(ModelParams, args),
+        train_params=construct_dataclass_from_args(TrainParams, args, "train_params"),
+        model_params=construct_dataclass_from_args(ModelParams, args, "model_params"),
         training_nonidealities=construct_dataclass_from_args(
-            Nonidealities, args, prefix="training"
+            Nonidealities, args, "training_nonidealities"
         ),
         testing_nonidealities=construct_dataclass_from_args(
-            Nonidealities, args, prefix="testing"
+            Nonidealities, args, "testing_nonidealities"
         ),
-        normalization=construct_dataclass_from_args(Normalization, args),
+        normalization=construct_dataclass_from_args(
+            Normalization, args, "normalization"
+        ),
         count_epoch=args.count_epoch,
         use_cache=not args.no_cache,
         print_rate=args.print_rate,

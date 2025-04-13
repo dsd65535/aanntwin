@@ -52,8 +52,8 @@ def _extract_type_and_nargs(candidate: Any) -> Tuple[type, Optional[str]]:
 def add_arguments_from_dataclass_fields(
     parent: type,
     parser: argparse.ArgumentParser,
+    prefix: str,
     help_dict: Optional[Dict[str, str]] = None,
-    prefix: Optional[str] = None,
 ) -> None:
     """Add an argument to a parser for each member of a dataclass"""
 
@@ -85,8 +85,7 @@ def add_arguments_from_dataclass_fields(
                 if default is True:
                     name = f"no_{name}"
 
-        if prefix is not None:
-            name = f"{prefix}_{name}"
+        name = f"{prefix}_{name}"
 
         if help_dict is not None and name in help_dict:
             kwargs["help"] = help_dict[name]
@@ -95,7 +94,7 @@ def add_arguments_from_dataclass_fields(
 
 
 def construct_dataclass_from_args(
-    parent: type, args: argparse.Namespace, prefix: Optional[str] = None
+    parent: type, args: argparse.Namespace, prefix: str
 ):  # TODO: figure out typing
     """Construct a dataclass from an argpase"""
 
@@ -103,9 +102,7 @@ def construct_dataclass_from_args(
         raise ValueError(f"Parent {parent} is not a dataclass")
 
     kwargs = {
-        field.name: getattr(args, field.name)
-        if prefix is None
-        else getattr(args, f"{prefix}_{field.name}")
+        field.name: getattr(args, f"{prefix}_{field.name}")
         for field in parent.__dataclass_fields__.values()
         if field.init
     }

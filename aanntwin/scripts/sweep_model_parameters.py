@@ -108,10 +108,10 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("database_filepath", type=Path, nargs="?")
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
-    add_arguments_from_dataclass_fields(TrainParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
-    add_arguments_from_dataclass_fields(Normalization, parser)
+    add_arguments_from_dataclass_fields(TrainParams, parser, "train_params")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "training_nonidealities")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "testing_nonidealities")
+    add_arguments_from_dataclass_fields(Normalization, parser, "normalization")
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
@@ -137,14 +137,14 @@ def main() -> None:
     if args.timed:
         start = time.time()
 
-    train_params = construct_dataclass_from_args(TrainParams, args)
+    train_params = construct_dataclass_from_args(TrainParams, args, "train_params")
     training_nonidealities = construct_dataclass_from_args(
-        Nonidealities, args, prefix="training"
+        Nonidealities, args, "training_nonidealities"
     )
     testing_nonidealities = construct_dataclass_from_args(
-        Nonidealities, args, prefix="testing"
+        Nonidealities, args, "testing_nonidealities"
     )
-    normalization = construct_dataclass_from_args(Normalization, args)
+    normalization = construct_dataclass_from_args(Normalization, args, "normalization")
 
     if args.database_filepath is None:
         database: Optional[Dict[str, Optional[float]]] = None

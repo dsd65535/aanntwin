@@ -80,9 +80,9 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("filepath", type=Path)
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
-    add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser)
-    add_arguments_from_dataclass_fields(Normalization, parser)
+    add_arguments_from_dataclass_fields(ModelParams, parser, "model_params")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "nonidealities")
+    add_arguments_from_dataclass_fields(Normalization, parser, "normalization")
     parser.add_argument("--seed", type=int, default=SEED_DEFAULT)
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
@@ -109,9 +109,13 @@ def main() -> None:
     test_only(
         args.filepath,
         dataset_name=args.dataset_name,
-        model_params=construct_dataclass_from_args(ModelParams, args),
-        nonidealities=construct_dataclass_from_args(Nonidealities, args),
-        normalization=construct_dataclass_from_args(Normalization, args),
+        model_params=construct_dataclass_from_args(ModelParams, args, "model_params"),
+        nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, "nonidealities"
+        ),
+        normalization=construct_dataclass_from_args(
+            Normalization, args, "normalization"
+        ),
         seed=args.seed,
     )
 
