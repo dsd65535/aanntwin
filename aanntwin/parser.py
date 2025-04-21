@@ -6,11 +6,14 @@ from dataclasses import _MISSING_TYPE
 from dataclasses import is_dataclass
 from pathlib import Path
 from typing import Any
+from typing import cast
 from typing import Dict
 from typing import get_args
 from typing import get_origin
 from typing import Optional
 from typing import Tuple
+from typing import Type
+from typing import TypeVar
 from typing import Union
 
 
@@ -101,9 +104,12 @@ def add_arguments_from_dataclass_fields(
     )
 
 
+T = TypeVar("T")
+
+
 def construct_dataclass_from_args(
-    parent: type, args: argparse.Namespace, prefix: str
-):  # TODO: figure out typing
+    parent: Type[T], args: argparse.Namespace, prefix: str
+) -> T:
     """Construct a dataclass from an argpase"""
 
     if not is_dataclass(parent):
@@ -120,4 +126,4 @@ def construct_dataclass_from_args(
             if field.init
         }
 
-    return parent(**kwargs)
+    return cast(T, parent(**kwargs))
