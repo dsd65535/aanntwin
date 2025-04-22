@@ -28,6 +28,7 @@ from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.normalize import normalize_values
 from aanntwin.parser import add_arguments_from_dataclass_fields
+from aanntwin.parser import construct_dataclass_from_args
 
 
 def run(
@@ -120,11 +121,11 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("output_filepath", type=Path)
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
-    add_arguments_from_dataclass_fields(TrainParams, parser)
-    add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="training")
-    add_arguments_from_dataclass_fields(Nonidealities, parser, prefix="testing")
-    add_arguments_from_dataclass_fields(Normalization, parser)
+    add_arguments_from_dataclass_fields(TrainParams, parser, "train_params")
+    add_arguments_from_dataclass_fields(ModelParams, parser, "model_params")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "training_nonidealities")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "testing_nonidealities")
+    add_arguments_from_dataclass_fields(Normalization, parser, "normalization")
     parser.add_argument("--count_epoch", type=int, default=COUNT_EPOCH_DEFAULT)
     parser.add_argument("--no_cache", action="store_true")
     parser.add_argument("--print_rate", type=int, nargs="?")
@@ -162,43 +163,16 @@ def main() -> None:
         [None] + [noise_idx / 100 for noise_idx in range(101)],
         args.output_filepath,
         dataset_name=args.dataset_name,
-        train_params=TrainParams(
-            batch_size=args.batch_size,
-            lr=args.lr,
-            weight_decay=args.weight_decay,
-            momentum=args.momentum,
+        train_params=construct_dataclass_from_args(TrainParams, args, "train_params"),
+        model_params=construct_dataclass_from_args(ModelParams, args, "model_params"),
+        training_nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, "training_nonidealities"
         ),
-        model_params=ModelParams(
-            conv_out_channels=args.conv_out_channels,
-            kernel_size=args.kernel_size,
-            stride=args.stride,
-            padding=args.padding,
-            pool_size=args.pool_size,
-            additional_layers=args.additional_layers,
+        testing_nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, "testing_nonidealities"
         ),
-        training_nonidealities=Nonidealities(
-            input_noise=args.training_input_noise,
-            relu_cutoff=args.training_relu_cutoff,
-            relu_out_noise=args.training_relu_out_noise,
-            linear_out_noise=args.training_linear_out_noise,
-            conv2d_out_noise=args.training_conv2d_out_noise,
-            linear_input_clip=args.training_linear_input_clip,
-            conv2d_input_clip=args.training_conv2d_input_clip,
-        ),
-        testing_nonidealities=Nonidealities(
-            input_noise=args.testing_input_noise,
-            relu_cutoff=args.testing_relu_cutoff,
-            relu_out_noise=args.testing_relu_out_noise,
-            linear_out_noise=args.testing_linear_out_noise,
-            conv2d_out_noise=args.testing_conv2d_out_noise,
-            linear_input_clip=args.testing_linear_input_clip,
-            conv2d_input_clip=args.testing_conv2d_input_clip,
-        ),
-        normalization=Normalization(
-            min_out=args.min_out,
-            max_out=args.max_out,
-            min_in=args.min_in,
-            max_in=args.max_in,
+        normalization=construct_dataclass_from_args(
+            Normalization, args, "normalization"
         ),
         count_epoch=args.count_epoch,
         use_cache=not args.no_cache,

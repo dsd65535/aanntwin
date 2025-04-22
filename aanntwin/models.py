@@ -88,6 +88,7 @@ class FullModelParams:
 
 @dataclass
 class Nonidealities:
+    # pylint:disable=too-many-instance-attributes  # dataclass
     """Nonidealities parameters for Main model"""
 
     input_noise: Optional[float] = None
@@ -97,12 +98,15 @@ class Nonidealities:
     conv2d_out_noise: Optional[float] = None
     linear_input_clip: Optional[float] = None
     conv2d_input_clip: Optional[float] = None
+    linear_input_nonlin: Optional[List[float]] = None
+    conv2d_input_nonlin: Optional[List[float]] = None
 
     def __str__(self) -> str:
         return (
             f"{self.input_noise}_{self.relu_cutoff}_{self.relu_out_noise}"
             f"_{self.linear_out_noise}_{self.conv2d_out_noise}"
             f"_{self.linear_input_clip}_{self.conv2d_input_clip}"
+            f"_{self.linear_input_nonlin}_{self.conv2d_input_nonlin}"
         )
 
 
@@ -190,9 +194,12 @@ class Linear(torch.nn.Module):
         self,
         in_features: int,
         out_features: int,
+        *,
         out_noise: Optional[float] = None,
         input_clip: Optional[float] = None,
+        input_nonlin: Optional[List[float]] = None,
     ) -> None:
+        # pylint:disable=too-many-arguments
         super().__init__()
 
         self.in_features, self.out_features = in_features, out_features
@@ -207,13 +214,21 @@ class Linear(torch.nn.Module):
         self.out_noise = out_noise
 
         self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+        self.input_nonlin = input_nonlin
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function"""
 
         if self.input_clip is not None:
             x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
+        if self.input_nonlin is not None:
+            new_x = torch.zeros(x.shape)
+            for power, coefficient in enumerate(self.input_nonlin):
+                new_x += coefficient * x.pow(power)
+            x = new_x
+
         out = torch.add(torch.mm(x, self.weight.t()), self.bias)
+
         if self.out_noise is not None:
             out = torch.add(
                 out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
@@ -232,8 +247,10 @@ class Conv2d(torch.nn.Conv2d):
         kernel_size: int,
         stride: int,
         padding: int,
+        *,
         out_noise: Optional[float] = None,
         input_clip: Optional[float] = None,
+        input_nonlin: Optional[List[float]] = None,
     ) -> None:
         # pylint:disable=too-many-arguments,too-many-positional-arguments
         super().__init__(in_channels, conv_out_channels, kernel_size, stride, padding)
@@ -241,6 +258,7 @@ class Conv2d(torch.nn.Conv2d):
         self.out_noise = out_noise
 
         self.input_clip = None if input_clip is None else torch.tensor([input_clip])
+        self.input_nonlin = input_nonlin
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # pylint:disable=arguments-renamed
@@ -248,7 +266,14 @@ class Conv2d(torch.nn.Conv2d):
 
         if self.input_clip is not None:
             x = torch.max(torch.min(x, self.input_clip), -self.input_clip)
+        if self.input_nonlin is not None:
+            new_x = torch.zeros(x.shape)
+            for power, coefficient in enumerate(self.input_nonlin):
+                new_x += coefficient * x.pow(power)
+            x = new_x
+
         out = super().forward(x)
+
         if self.out_noise is not None:
             out = torch.add(
                 out, torch.randn(out.shape).to(out.device), alpha=self.out_noise
@@ -307,8 +332,9 @@ class Main(torch.nn.Module):
                     full_model_params.kernel_size,
                     full_model_params.stride,
                     full_model_params.padding,
-                    nonidealities.conv2d_out_noise,
-                    nonidealities.conv2d_input_clip,
+                    out_noise=nonidealities.conv2d_out_noise,
+                    input_clip=nonidealities.conv2d_input_clip,
+                    input_nonlin=nonidealities.conv2d_input_nonlin,
                 ),
                 "conv2d",
             )
@@ -329,7 +355,18 @@ class Main(torch.nn.Module):
             full_model_params.additional_layer_sizes
         ):
             name = f"additional_linear_{idx}"
-            layers.append((Linear(in_size, out_size), name))
+            layers.append(
+                (
+                    Linear(
+                        in_size,
+                        out_size,
+                        out_noise=nonidealities.linear_out_noise,
+                        input_clip=nonidealities.linear_input_clip,
+                        input_nonlin=nonidealities.linear_input_nonlin,
+                    ),
+                    name,
+                )
+            )
             if record:
                 self.store[name] = []
                 layers.append((Recorder(self.store[name]), f"{name}_record"))
@@ -340,8 +377,9 @@ class Main(torch.nn.Module):
                 Linear(
                     full_model_params.final_size,
                     full_model_params.feature_count,
-                    nonidealities.linear_out_noise,
-                    nonidealities.linear_input_clip,
+                    out_noise=nonidealities.linear_out_noise,
+                    input_clip=nonidealities.linear_input_clip,
+                    input_nonlin=nonidealities.linear_input_nonlin,
                 ),
                 "linear",
             )

@@ -2,6 +2,7 @@
 """This script tests an existing model"""
 import argparse
 import logging
+import random
 import time
 from pathlib import Path
 from typing import Optional
@@ -11,6 +12,7 @@ import torch
 
 from aanntwin.__main__ import DATASET_NAME_DEFAULT
 from aanntwin.__main__ import ModelParams
+from aanntwin.__main__ import SEED_DEFAULT
 from aanntwin.basic import get_device
 from aanntwin.basic import test_model
 from aanntwin.datasets import get_dataset_and_params
@@ -18,6 +20,7 @@ from aanntwin.models import Main
 from aanntwin.models import Nonidealities
 from aanntwin.models import Normalization
 from aanntwin.parser import add_arguments_from_dataclass_fields
+from aanntwin.parser import construct_dataclass_from_args
 
 
 def test_only(
@@ -27,8 +30,14 @@ def test_only(
     model_params: Optional[ModelParams] = None,
     nonidealities: Optional[Nonidealities] = None,
     normalization: Optional[Normalization] = None,
-) -> None:
+    seed: Optional[int] = SEED_DEFAULT,
+) -> float:
+    # pylint:disable=too-many-arguments
     """Test a model using pre-trained parameters"""
+
+    if seed is not None:
+        torch.manual_seed(seed)
+        random.seed(seed)
 
     if model_params is None:
         model_params = ModelParams()
@@ -59,6 +68,8 @@ def test_only(
     print(f"Average Loss:  {avg_loss:<9f}")
     print(f"Accuracy:      {(100*accuracy):<0.4f}%")
 
+    return accuracy
+
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI Arguments"""
@@ -69,9 +80,10 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("filepath", type=Path)
     parser.add_argument("--dataset_name", type=str, default=DATASET_NAME_DEFAULT)
-    add_arguments_from_dataclass_fields(ModelParams, parser)
-    add_arguments_from_dataclass_fields(Nonidealities, parser)
-    add_arguments_from_dataclass_fields(Normalization, parser)
+    add_arguments_from_dataclass_fields(ModelParams, parser, "model_params")
+    add_arguments_from_dataclass_fields(Nonidealities, parser, "nonidealities")
+    add_arguments_from_dataclass_fields(Normalization, parser, "normalization")
+    parser.add_argument("--seed", type=int, default=SEED_DEFAULT)
     parser.add_argument("--print_git_info", action="store_true")
     parser.add_argument("--timed", action="store_true")
 
@@ -97,26 +109,14 @@ def main() -> None:
     test_only(
         args.filepath,
         dataset_name=args.dataset_name,
-        model_params=ModelParams(
-            conv_out_channels=args.conv_out_channels,
-            kernel_size=args.kernel_size,
-            stride=args.stride,
-            padding=args.padding,
-            pool_size=args.pool_size,
-            additional_layers=args.additional_layers,
+        model_params=construct_dataclass_from_args(ModelParams, args, "model_params"),
+        nonidealities=construct_dataclass_from_args(
+            Nonidealities, args, "nonidealities"
         ),
-        nonidealities=Nonidealities(
-            input_noise=args.input_noise,
-            relu_cutoff=args.relu_cutoff,
-            relu_out_noise=args.relu_out_noise,
-            linear_out_noise=args.linear_out_noise,
+        normalization=construct_dataclass_from_args(
+            Normalization, args, "normalization"
         ),
-        normalization=Normalization(
-            min_out=args.min_out,
-            max_out=args.max_out,
-            min_in=args.min_in,
-            max_in=args.max_in,
-        ),
+        seed=args.seed,
     )
 
     if args.timed:
